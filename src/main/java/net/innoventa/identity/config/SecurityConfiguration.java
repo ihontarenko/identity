@@ -62,6 +62,12 @@ public class SecurityConfiguration {
         httpSecurity
             .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
             .with(authorizationServerConfigurer, configurer -> configurer.oidc(Customizer.withDefaults()))
+            // These endpoints (/oauth2/token, /oauth2/introspect, /oauth2/revoke, ...) are called
+            // server-to-server by confidential clients authenticating with Basic auth, never by a
+            // browser form submission — CSRF protection has nothing to defend here and only blocks
+            // legitimate token requests. The human-facing /login page (a separate filter chain)
+            // keeps CSRF protection.
+            .csrf(csrf -> csrf.disable())
             .exceptionHandling(exceptionHandling -> exceptionHandling.defaultAuthenticationEntryPointFor(
                 new LoginUrlAuthenticationEntryPoint("/login"),
                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
