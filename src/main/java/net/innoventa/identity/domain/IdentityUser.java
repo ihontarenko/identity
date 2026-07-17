@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = "id")
-public class User {
+public class IdentityUser {
 
     @Id
     @Column(length = 36, nullable = false)

@@ -59,8 +59,9 @@ tokens just stop verifying) but is the first thing to fix before this runs anywh
 `SecurityConfiguration.generateRsaKey()` with a key loaded from a persisted keystore or secret store,
 since every resource server's trust in this service rests on that key never silently rotating.
 
-`security/UserDetailsServiceImpl` loads `identity_users` rows and grants a single generic
-`ROLE_USER` authority — this service does not model per-app roles.
+`security/IdentityUserDetailsService` loads `identity_users` rows (via `IdentityUserRepository`,
+backed by the `domain/IdentityUser` entity) and grants a single generic `ROLE_USER` authority — this
+service does not model per-app roles.
 
 ## Database Migrations
 
