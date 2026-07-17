@@ -43,7 +43,7 @@ spring:
     time-zone: UTC
 
 server:
-  port: ${IDENTITY_SERVER_PORT:9000}
+  port: ${IDENTITY_SERVER_PORT:9090}
   error:
     include-message: always
     include-stacktrace: never
@@ -68,7 +68,7 @@ springdoc:
     tags-sorter: alpha
 
 identity:
-  issuer: ${IDENTITY_ISSUER:http://localhost:9000}
+  issuer: ${IDENTITY_ISSUER:http://localhost:9090}
   clients:
     innoventa:
       client-id: ${IDENTITY_INNOVENTA_CLIENT_ID:innoventa-web}

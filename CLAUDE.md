@@ -18,7 +18,7 @@ tokens. Roles, permissions, and workspace/persona scoping stay local to each app
 # Build
 mvn clean package -DskipTests
 
-# Run (H2 dev profile, default) — listens on port 9000
+# Run (H2 dev profile, default) — listens on port 9090
 mvn spring-boot:run
 
 # Run with MySQL / PostgreSQL
