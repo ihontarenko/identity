@@ -1,0 +1,138 @@
+spring:
+  application:
+    name: identity-api
+
+  datasource:
+    url: jdbc:h2:file:./H2/H2DB;AUTO_SERVER=TRUE;MODE=PostgreSQL;NON_KEYWORDS=VALUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      pool-name: IDENTITY-POOL
+      maximum-pool-size: 5
+      minimum-idle: 2
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/h2
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    out-of-order: true
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+
+server:
+  port: ${IDENTITY_SERVER_PORT:9000}
+  error:
+    include-message: always
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,flyway
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+identity:
+  issuer: ${IDENTITY_ISSUER:http://localhost:9000}
+  clients:
+    innoventa:
+      client-id: ${IDENTITY_INNOVENTA_CLIENT_ID:innoventa-web}
+      client-secret: ${IDENTITY_INNOVENTA_CLIENT_SECRET:innoventa-dev-secret}
+      redirect-uri: ${IDENTITY_INNOVENTA_REDIRECT_URI:http://localhost:5173/login/oauth2/code/identity}
+      audience: innoventa
+    financemonitor:
+      client-id: ${IDENTITY_FINANCEMONITOR_CLIENT_ID:financemonitor-web}
+      client-secret: ${IDENTITY_FINANCEMONITOR_CLIENT_SECRET:financemonitor-dev-secret}
+      redirect-uri: ${IDENTITY_FINANCEMONITOR_REDIRECT_URI:http://localhost:5174/login/oauth2/code/identity}
+      audience: financemonitor
+
+logging:
+  level:
+    net.innoventa.identity: DEBUG
+    org.springframework.security: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%-5level){highlight} %clr([%15.15t]){faint} %clr(%-40.40logger{36}){cyan} : %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  flyway:
+    locations: classpath:db/migration/mysql
+    out-of-order: true
+  datasource:
+    url: ${IDENTITY_DB_URL:jdbc:mysql://localhost:3306/identity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci}
+    username: ${IDENTITY_DB_USERNAME:identity}
+    password: ${IDENTITY_DB_PASSWORD:identity}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  h2:
+    console:
+      enabled: false
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgresql
+  flyway:
+    locations: classpath:db/migration/postgresql
+    out-of-order: true
+  datasource:
+    url: ${IDENTITY_DB_URL:jdbc:postgresql://localhost:5432/identity}
+    username: ${IDENTITY_DB_USERNAME:identity}
+    password: ${IDENTITY_DB_PASSWORD:identity}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  h2:
+    console:
+      enabled: false
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
