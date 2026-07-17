@@ -78,19 +78,19 @@ identity:
       client-secret: innoventa-dev-secret
       redirect-uri: http://localhost:5173/login/oauth2/code/identity
       audience: innoventa
-    financemonitor:
-      client-id: financemonitor-web
-      client-secret: financemonitor-dev-secret
+    finance_monitor:
+      client-id: finance_monitor-web
+      client-secret: finance_monitor-dev-secret
       redirect-uri: http://localhost:5174/login/oauth2/code/identity
-      audience: financemonitor
+      audience: finance_monitor
 ```
 
 Every token this service issues carries an `aud` claim matching the requesting client's `audience`
 setting, so a token minted for `innoventa` is rejected by a resource server checking for
-`financemonitor`, and vice versa.
+`finance_monitor`, and vice versa.
 
 Override any of these per environment with `IDENTITY_INNOVENTA_CLIENT_ID`,
-`IDENTITY_INNOVENTA_CLIENT_SECRET`, `IDENTITY_INNOVENTA_REDIRECT_URI` (and the `FINANCEMONITOR`
+`IDENTITY_INNOVENTA_CLIENT_SECRET`, `IDENTITY_INNOVENTA_REDIRECT_URI` (and the `FINANCE_MONITOR`
 equivalents) — never commit real secrets into `application.yml`.
 
 ## Trying the Authorization Code Flow Manually

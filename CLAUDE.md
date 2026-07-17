@@ -48,7 +48,7 @@ Default seeded user: `ihontarenko@gmail.com` / `admin` — change after first lo
   (`/oauth2/authorize`, `/oauth2/token`, `/oauth2/jwks`, `/userinfo`, …)
 - `defaultSecurityFilterChain` (`@Order(2)`) — form login for everything else
 - `registeredClientRepository` — builds one `RegisteredClient` per entry under `identity.clients.*`
-  in `application.yml` (currently `innoventa` and `financemonitor`), each with its own client
+  in `application.yml` (currently `innoventa` and `finance_monitor`), each with its own client
   id/secret/redirect URI and an `audience` custom client setting
 - `tokenCustomizer` — reads that `audience` setting and stamps it onto every issued token's `aud`
   claim, so a token minted for one app cannot be replayed against the other

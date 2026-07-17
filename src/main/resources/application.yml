@@ -75,11 +75,11 @@ identity:
       client-secret: ${IDENTITY_INNOVENTA_CLIENT_SECRET:innoventa-dev-secret}
       redirect-uri: ${IDENTITY_INNOVENTA_REDIRECT_URI:http://localhost:5173/login/oauth2/code/identity}
       audience: innoventa
-    financemonitor:
-      client-id: ${IDENTITY_FINANCEMONITOR_CLIENT_ID:financemonitor-web}
-      client-secret: ${IDENTITY_FINANCEMONITOR_CLIENT_SECRET:financemonitor-dev-secret}
-      redirect-uri: ${IDENTITY_FINANCEMONITOR_REDIRECT_URI:http://localhost:5174/login/oauth2/code/identity}
-      audience: financemonitor
+    finance_monitor:
+      client-id: ${IDENTITY_FINANCE_MONITOR_CLIENT_ID:finance_monitor-web}
+      client-secret: ${IDENTITY_FINANCE_MONITOR_CLIENT_SECRET:finance_monitor-dev-secret}
+      redirect-uri: ${IDENTITY_FINANCE_MONITOR_REDIRECT_URI:http://localhost:5174/login/oauth2/code/identity}
+      audience: finance_monitor
 
 logging:
   level:
