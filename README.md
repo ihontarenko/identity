@@ -1,8 +1,9 @@
 # Identity
 
 Centralized OAuth2 / OpenID Connect authorization server for the Innoventa ecosystem. It answers
-one question — "who is this user" — for both `Innoventa` and `FinanceMonitor`. Those two applications
-never mint their own tokens; they validate tokens issued here against this service's public keys.
+one question — "who is this user" — for both `Innoventa` and `Moneta` (formerly FinanceMonitor).
+Those two applications never mint their own tokens; they validate tokens issued here against this
+service's public keys.
 
 This is `id.innoventa.net` in local-development form: a standalone Spring Boot service, not yet wired
 into either consuming application.
@@ -66,7 +67,7 @@ automatically on startup.
 
 ## Registered Clients
 
-Trusting applications are configured under `identity.clients` in `application.yml`. Two are seeded
+Trusting applications are configured under `identity.clients` in `application.yml`. Three are seeded
 for local development:
 
 ```yaml
@@ -76,22 +77,29 @@ identity:
     innoventa:
       client-id: innoventa-web
       client-secret: innoventa-dev-secret
-      redirect-uri: http://localhost:5173/login/oauth2/code/identity
+      redirect-uri: http://localhost:5010/login/oauth2/code/identity
       audience: innoventa
-    finance_monitor:
-      client-id: finance_monitor-web
-      client-secret: finance_monitor-dev-secret
-      redirect-uri: http://localhost:5174/login/oauth2/code/identity
-      audience: finance_monitor
+      public-client: false
+    moneta:
+      client-id: moneta-web
+      redirect-uri: http://localhost:5020/login/oauth2/code/identity
+      audience: moneta
+      public-client: true   # no client-secret — PKCE replaces it
+    central:
+      client-id: innoventa_central-web
+      redirect-uri: http://localhost:5040/login/oauth2/code/identity
+      audience: innoventa_central
+      public-client: true   # no client-secret — PKCE replaces it
 ```
 
 Every token this service issues carries an `aud` claim matching the requesting client's `audience`
-setting, so a token minted for `innoventa` is rejected by a resource server checking for
-`finance_monitor`, and vice versa.
+setting, so a token minted for `innoventa` is rejected by a resource server checking for `moneta`,
+and vice versa. `innoventa` is a confidential client (secret + HTTP Basic); `moneta` and `central` are
+public clients (browser SPAs, no secret to leak — Authorization Code + PKCE instead).
 
 Override any of these per environment with `IDENTITY_INNOVENTA_CLIENT_ID`,
-`IDENTITY_INNOVENTA_CLIENT_SECRET`, `IDENTITY_INNOVENTA_REDIRECT_URI` (and the `FINANCE_MONITOR`
-equivalents) — never commit real secrets into `application.yml`.
+`IDENTITY_INNOVENTA_CLIENT_SECRET`, `IDENTITY_INNOVENTA_REDIRECT_URI` (and the matching `MONETA_*` /
+`CENTRAL_*` variables) — never commit real secrets into `application.yml`.
 
 ## Trying the Authorization Code Flow Manually
 
@@ -103,7 +111,7 @@ http://localhost:9090/oauth2/authorize?
   response_type=code&
   client_id=innoventa-web&
   scope=openid%20profile%20email&
-  redirect_uri=http://localhost:5173/login/oauth2/code/identity&
+  redirect_uri=http://localhost:5010/login/oauth2/code/identity&
   code_challenge=<PKCE_CHALLENGE>&
   code_challenge_method=S256
 ```
@@ -116,7 +124,7 @@ valid and can be exchanged manually:
 curl -u innoventa-web:innoventa-dev-secret \
   -d grant_type=authorization_code \
   -d code=<CODE_FROM_REDIRECT> \
-  -d redirect_uri=http://localhost:5173/login/oauth2/code/identity \
+  -d redirect_uri=http://localhost:5010/login/oauth2/code/identity \
   -d code_verifier=<PKCE_VERIFIER> \
   http://localhost:9090/oauth2/token
 ```
@@ -129,7 +137,7 @@ the client you authenticated as.
 
 - **The RSA signing key is regenerated on every restart.** Every token issued before a restart stops
   verifying the moment it happens. This is fine for local development but must be replaced with a
-  persisted key (keystore or secret manager) before Innoventa or FinanceMonitor depend on this
+  persisted key (keystore or secret manager) before Innoventa or Moneta depend on this
   service for real — see `SecurityConfiguration.generateRsaKey()`.
 - **No self-service registration, password reset, or email verification yet.** Only the seeded admin
   user exists.
@@ -142,4 +150,4 @@ the client you authenticated as.
 `CLAUDE.md` in this directory documents the internal wiring (`SecurityConfiguration`, token
 customization, migration conventions) for anyone extending this service. The decision to centralize
 identity this way — and why authorization stays local to each app — is recorded in
-`../FinanceMonitor/QUESTIONS.md`.
+`../Moneta/QUESTIONS.md`.

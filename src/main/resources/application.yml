@@ -2,6 +2,20 @@ spring:
   application:
     name: identity-api
 
+  config:
+    import: classpath:application-sensitive.yml
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: "${IDENTITY_ISSUER:http://localhost:9090}/login/oauth2/code/google"
+            scope: email, profile
+          github:
+            redirect-uri: "${IDENTITY_ISSUER:http://localhost:9090}/login/oauth2/code/github"
+            scope: read:user, user:email
+
   datasource:
     url: jdbc:h2:file:./H2/H2DB;AUTO_SERVER=TRUE;MODE=PostgreSQL;NON_KEYWORDS=VALUE
     username: sa
@@ -47,6 +61,16 @@ server:
   error:
     include-message: always
     include-stacktrace: never
+  servlet:
+    session:
+      # Cookie-only — without this, Tomcat falls back to appending ;jsessionid=... to redirect
+      # URLs on a client's very first request (before it knows a cookie round-tripped), and
+      # Spring Security's StrictHttpFirewall rejects any URL containing ';' by default. That
+      # combination turned a first-time login into a redirect to a garbled /error?continue —
+      # found by actually driving the login flow in a real (cookie-less, fresh-session) browser,
+      # not by reasoning about it. Cookie-only is also just better practice regardless: a session
+      # id embedded in a URL leaks into server logs, browser history, and Referer headers.
+      tracking-modes: cookie
 
 management:
   endpoints:
@@ -70,16 +94,40 @@ springdoc:
 identity:
   issuer: ${IDENTITY_ISSUER:http://localhost:9090}
   clients:
+    # Confidential client — Innoventa hasn't migrated onto this service yet, so this entry is
+    # provisional. Left exactly as-is (secret + HTTP Basic, no PKCE) when moneta below
+    # was reconfigured as a public client — do not change this one without being asked.
     innoventa:
       client-id: ${IDENTITY_INNOVENTA_CLIENT_ID:innoventa-web}
       client-secret: ${IDENTITY_INNOVENTA_CLIENT_SECRET:innoventa-dev-secret}
-      redirect-uri: ${IDENTITY_INNOVENTA_REDIRECT_URI:http://localhost:5173/login/oauth2/code/identity}
+      redirect-uri: ${IDENTITY_INNOVENTA_REDIRECT_URI:http://localhost:5010/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_INNOVENTA_POST_LOGOUT_REDIRECT_URI:http://localhost:5010}
       audience: innoventa
-    finance_monitor:
-      client-id: ${IDENTITY_FINANCE_MONITOR_CLIENT_ID:finance_monitor-web}
-      client-secret: ${IDENTITY_FINANCE_MONITOR_CLIENT_SECRET:finance_monitor-dev-secret}
-      redirect-uri: ${IDENTITY_FINANCE_MONITOR_REDIRECT_URI:http://localhost:5174/login/oauth2/code/identity}
-      audience: finance_monitor
+      public-client: false
+    # Public client — the Moneta UI is a pure browser SPA with nowhere safe to keep a
+    # client secret, so it authenticates via Authorization Code + PKCE instead (no secret,
+    # requireProofKey enforced in SecurityConfiguration.buildRegisteredClient). client-secret is
+    # intentionally absent: a public client never presents one.
+    moneta:
+      client-id: ${IDENTITY_MONETA_CLIENT_ID:moneta-web}
+      redirect-uri: ${IDENTITY_MONETA_REDIRECT_URI:http://localhost:5020/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_MONETA_POST_LOGOUT_REDIRECT_URI:http://localhost:5020}
+      audience: moneta
+      public-client: true
+    # Public client — Innoventa Central's UI, same shape as moneta above (no secret, PKCE via
+    # requireProofKey). audience must read "innoventa_central" (not the shorter "central") to
+    # match Central/BE's own accepted-audiences allow-list
+    # (innoventa-central.security.accepted-audiences, see Central/src/main/resources/
+    # application.yml) — a mismatch here means every authenticated API call 401s no matter how
+    # fresh the token is, which used to cascade into an infinite signin-redirect loop via
+    # Central/UI's httpClient.ts response interceptor (any 401 → signinRedirect()). Found by
+    # tracing that interceptor, not by guessing.
+    central:
+      client-id: ${IDENTITY_CENTRAL_CLIENT_ID:innoventa_central-web}
+      redirect-uri: ${IDENTITY_CENTRAL_REDIRECT_URI:http://localhost:5040/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_CENTRAL_POST_LOGOUT_REDIRECT_URI:http://localhost:5040}
+      audience: innoventa_central
+      public-client: true
 
 logging:
   level:

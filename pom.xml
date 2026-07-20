@@ -17,7 +17,7 @@
     <artifactId>identity-api</artifactId>
     <version>0.1.0</version>
     <name>Innoventa Identity</name>
-    <description>Centralized OAuth2 / OpenID Connect authorization server for Innoventa and FinanceMonitor</description>
+    <description>Centralized OAuth2 / OpenID Connect authorization server for Innoventa and Moneta</description>
 
     <properties>
         <java.version>21</java.version>
@@ -58,6 +58,13 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-oauth2-authorization-server</artifactId>
+        </dependency>
+        <!-- Identity is simultaneously an OAuth2 CLIENT to Google/GitHub (this dependency) and an
+             OAuth2 AUTHORIZATION SERVER to Innoventa/Moneta (the dependency above) — two
+             separate roles on two separate SecurityFilterChains, see SecurityConfiguration. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
 
         <!-- Data / JPA -->
@@ -206,6 +213,55 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+
+            <!-- UI/vite.config.ts's own comment used to say "no frontend-maven-plugin" — reversed by
+                 explicit request: running via `mvn spring-boot:run` on 9090 served whatever UI/dist
+                 happened to exist from the last manual `npm run build`, which silently went stale
+                 the moment you kept editing and only checked the Vite dev server (5175). Both goals
+                 default-bind to generate-resources, which runs before compile — so by the time Boot
+                 packages/serves static resources, UI/src/main/resources/static (Vite's own outDir)
+                 is always freshly rebuilt from the current UI/src, on `mvn clean compile` and
+                 `mvn spring-boot:run` alike. Node/npm versions pinned to what's already proven
+                 working locally, downloaded into UI/node (gitignored) rather than relying on
+                 whatever's globally installed. -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.1</version>
+                <configuration>
+                    <workingDirectory>UI</workingDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>v24.15.0</nodeVersion>
+                            <npmVersion>11.12.1</npmVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

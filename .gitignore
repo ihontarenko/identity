@@ -29,3 +29,7 @@ output/
 *.db
 
 /H2
+
+# frontend-maven-plugin regenerates this from UI/ on every build (emptyOutDir: true) — never
+# hand-edited, never committed.
+/src/main/resources/static/

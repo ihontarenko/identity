@@ -5,9 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What This Is
 
 Centralized identity: a Spring Authorization Server that answers "who is this user" for both
-`Innoventa` and `FinanceMonitor`. It mints OAuth2 / OIDC tokens; those two apps become **Resource
-Servers** that only validate tokens against this service's JWKS endpoint — never mint their own.
-The reasoning is recorded in `../FinanceMonitor/QUESTIONS.md`.
+`Innoventa` and `Moneta` (formerly FinanceMonitor). It mints OAuth2 / OIDC tokens; those two apps
+become **Resource Servers** that only validate tokens against this service's JWKS endpoint — never
+mint their own.
+The reasoning is recorded in `../Moneta/QUESTIONS.md`.
 
 **Identity is centralized here; authorization is not.** This service knows email/password and issues
 tokens. Roles, permissions, and workspace/persona scoping stay local to each app.
@@ -48,11 +49,47 @@ Default seeded user: `ihontarenko@gmail.com` / `admin` — change after first lo
   (`/oauth2/authorize`, `/oauth2/token`, `/oauth2/jwks`, `/userinfo`, …)
 - `defaultSecurityFilterChain` (`@Order(2)`) — form login for everything else
 - `registeredClientRepository` — builds one `RegisteredClient` per entry under `identity.clients.*`
-  in `application.yml` (currently `innoventa` and `finance_monitor`), each with its own client
-  id/secret/redirect URI and an `audience` custom client setting
-- `tokenCustomizer` — reads that `audience` setting and stamps it onto every issued token's `aud`
-  claim, so a token minted for one app cannot be replayed against the other
+  in `application.yml` (currently `innoventa` and `moneta`), each with its own client
+  id/redirect URI and an `audience` custom client setting. `SecurityConfiguration.buildRegisteredClient`
+  branches on each entry's `public-client` flag: `innoventa` (`public-client: false`, unchanged) is a
+  confidential client — a secret exchanged via `CLIENT_SECRET_BASIC`, no PKCE. `moneta`
+  (`public-client: true`) is a public client — no secret (a browser SPA has nowhere safe to keep
+  one), `ClientAuthenticationMethod.NONE`, PKCE required via `requireProofKey`. Don't flip
+  `innoventa`'s flag without being asked; the two apps are on deliberately different auth patterns
+  until Innoventa actually migrates onto this service.
+- `corsConfigurationSource` — allows cross-origin requests only from `public-client` origins (derived
+  from their `redirect-uri`), applied via `.cors(Customizer.withDefaults())` on **both** security
+  filter chains. This had to be on both: the authorization-server chain's per-endpoint matchers are
+  method-specific, so a browser's `OPTIONS` preflight to e.g. `/oauth2/token` doesn't match them and
+  falls through to the default chain instead.
+- `tokenCustomizer` — reads that `audience` setting and stamps it onto every issued **access**
+  token's `aud` claim, so a token minted for one app cannot be replayed against the other.
+  Deliberately does **not** touch ID tokens — it used to apply to both, which silently broke OIDC
+  RP-Initiated Logout (`/connect/logout` rejected every `id_token_hint` with an `invalid_token ...
+  aud` error, since the endpoint validates the hint's audience against the registered client) and
+  violated OIDC Core 1.0 §3.1.3.7 (an ID token's `aud` must be the client's own `client_id`). Found
+  by actually driving a full login → logout → re-authorize cycle, not by checking that sign-in
+  worked — sign-in looked completely fine with the broken customizer.
 - `jwkSource` / `jwtDecoder` — an RSA key pair generated at startup
+
+**`authorizationServerSecurityFilterChain` needs an explicit
+`.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())` call — without it, the
+whole browser login flow silently breaks, and not in an obvious way.** `securityMatcher(...)` alone
+correctly routes `/oauth2/authorize` into this chain (`FilterChainProxy` logs "Secured GET
+/oauth2/authorize"), but `OAuth2AuthorizationEndpointFilter` itself then never actually processes the
+request — it falls through to Spring MVC's static-resource handler and 404s as
+`NoResourceFoundException: No static resource oauth2/authorize`, which Boot's error handling silently
+forwards to `/error`. Since that forward requires auth too, `ExceptionTranslationFilter` still
+redirects to `/login` — so a curl/browser test that only checks "did I land on the login page" sees a
+perfectly clean 302 and looks completely successful. The bug only surfaces on the *next* hop: after a
+real login, `SavedRequestAwareAuthenticationSuccessHandler` replays the saved request — which is
+`/error?...&continue`, not the original `/oauth2/authorize?...` — landing on a Whitelabel 404 instead
+of back at the SPA. Confirmed this reproduces identically even on a version of this file with zero
+CORS-related code at all, so it isn't a CORS interaction; it seems to be a genuine requirement of
+Spring Authorization Server's exception-translation/request-cache machinery that isn't obvious from
+the reference docs' code shape. Found only by driving the *entire* flow (redirect → real login submit
+→ replay) in an actual browser and reading `HttpSessionRequestCache`'s "Saved request" log line, not
+by checking the first redirect in isolation.
 
 **The RSA key pair is regenerated on every restart.** That's fine for local development (existing
 tokens just stop verifying) but is the first thing to fix before this runs anywhere shared — replace
@@ -81,22 +118,136 @@ identity:
     innoventa:
       client-id: innoventa-web
       client-secret: ...
-      redirect-uri: http://localhost:5173/login/oauth2/code/identity
+      redirect-uri: http://localhost:5010/login/oauth2/code/identity
+      post-logout-redirect-uri: http://localhost:5010
       audience: innoventa
+      public-client: false
+    moneta:
+      client-id: moneta-web
+      redirect-uri: http://localhost:5020/login/oauth2/code/identity
+      post-logout-redirect-uri: http://localhost:5020
+      audience: moneta
+      public-client: true   # no client-secret — PKCE replaces it, see Architecture above
 ```
+
+`post-logout-redirect-uri` is required for OIDC RP-Initiated Logout (`/connect/logout`, Spring
+Authorization Server's default end-session endpoint — enabled automatically) to actually redirect
+back to the app after signing out; without a matching registered URI, the server won't redirect
+there. Moneta's sign-out button calls `auth.signoutRedirect()` (not `auth.removeUser()`,
+which only clears the local token and left Identity's session cookie alive — `ProtectedRoute` would
+then immediately re-trigger `signinRedirect()`, and since the session was never actually terminated,
+Identity silently re-authenticated and bounced the user right back in without ever showing a login
+prompt).
 
 Client secrets and redirect URIs are overridable via `IDENTITY_<NAME>_CLIENT_ID` /
 `IDENTITY_<NAME>_CLIENT_SECRET` / `IDENTITY_<NAME>_REDIRECT_URI` environment variables — never commit
-real secrets to `application.yml`.
+real secrets to `application.yml`. `public-client` entries have no secret to override.
+
+## Web UI (Login + Account)
+
+Identity has a small hand-rolled Thymeleaf UI now — its first frontend of any kind (`spring-boot-
+starter-thymeleaf` added to `pom.xml`; no Node/build tooling, matching Innoventa's own hand-rolled-
+CSS approach rather than introducing Tailwind into a Maven project):
+
+- `web/LoginViewController` (`GET /login`) replaces Spring Security's default login page —
+  `templates/login.html`, wired via `SecurityConfiguration.defaultSecurityFilterChain`'s
+  `.formLogin(form -> form.loginPage("/login").permitAll())`.
+- `web/AccountController` (`GET /account`, `POST /account/profile`, `POST /account/password`) —
+  self-service for an already-authenticated user: edit display name, change password (current +
+  new + confirm, current-password verified via the existing `PasswordEncoder` bean). Backed by
+  `service/AccountService`, deliberately kept free of any HTTP/view concerns (no `Model`, no
+  `BindingResult`) — this is the layer a future REST API sits on top of, not `AccountController`
+  itself. Form-backing types (`web/form/ProfileForm`, `PasswordForm`) are plain validated records
+  bound via `@ModelAttribute`, not MapStruct DTOs — that convention exists to decouple JSON API
+  shapes from JPA entities across a serialization boundary; a same-request Thymeleaf form binding
+  has no such boundary to justify the extra layer.
+- `templates/fragments/brand.html` — shared `<head>` (fonts, `static/css/identity.css` link) and
+  brand-mark fragment, `th:replace`d into both pages.
+- `static/css/identity.css` — palette values ported from `Innoventa/UI/src/stores/themeStore.ts`'s
+  `cream` (light, default) and `steel` (dark, via `prefers-color-scheme` only — no toggle, no full
+  27-theme picker; deliberately smaller scope than Innoventa/Moneta's interactive theme
+  systems since this is a page users pass through briefly, not live in).
+- CSRF: Thymeleaf's Spring integration (part of `spring-boot-starter-thymeleaf`, not the separate
+  `thymeleaf-extras-springsecurity6` module) auto-injects the CSRF hidden field into any `th:action`
+  form when a `RequestDataValueProcessor` bean is present — Spring Security's CSRF configuration
+  registers one automatically. Do **not** add a manual `<input type="hidden" th:name="${_csrf...}"`
+  field — it renders twice (learned by testing this against a real browser flow, not just checking
+  the page loads).
+
+**Future migration path (Innoventa onto centralized identity):** invites, space membership, and
+roles stay entirely in Innoventa's own domain forever — per "Identity is centralized; authorization
+is not" above, those are authorization concerns, not identity ones. When Innoventa migrates, it
+becomes a pure Resource Server (like Moneta already is) and keeps rendering its own profile
+page UI; it doesn't redirect to Identity's pages for that. The reason `AccountService` has no
+HTTP-layer leakage is exactly so Innoventa's backend (or frontend) can call the same operations via
+a future `AccountRestController` (JSON, bearer-token authenticated) without any rework to the
+service layer — that REST controller doesn't exist yet and isn't needed until that migration
+actually starts.
+
+**Planned, not yet built: Identity's own React frontend.** The Thymeleaf pages above are explicitly
+a placeholder — the plan is to replace them with a React SPA (landing page, account management, an
+admin user-management panel with block/unlock/delete, MFA), matching Innoventa/Moneta's
+stack, "get rid of spring rendering" entirely. Not started; needs its own scoping pass before
+implementation (bundles several independently-large features — don't build it as one undifferentiated
+blob).
+
+## Google / GitHub Login
+
+Mirrors Innoventa's `security/oauth2` design exactly (same `Provider` enum values, same
+extract-email/extract-display-name logic, same lookup-by-`(email, provider)` upsert shape) — see
+`Innoventa/BE/src/main/java/net/innoventa/security/oauth2/` for the reference this was ported from.
+What's necessarily different: Innoventa is a stateless JWT backend (issues a one-time code, redirects
+to a separate SPA to exchange it); Identity's human-facing chain is session-based, so
+`OAuth2LoginSuccessHandler` swaps the post-login `SecurityContext` to a session-persisted
+`UsernamePasswordAuthenticationToken` and delegates to `SavedRequestAwareAuthenticationSuccessHandler`
+instead — see that class's Javadoc for the full reasoning.
+
+**`identity_users.provider` (`LOCAL`/`GOOGLE`/`GITHUB`)** — added directly to `V000001`'s `CREATE
+TABLE` rather than a follow-up migration (this table hadn't shipped anywhere beyond local dev yet).
+The same email can now have separate rows per provider — same design as Innoventa's
+`security_users`, same tradeoff: no account linking, signing in via a second provider with an
+already-registered email creates a *second*, separate identity row, not one identity with two
+sign-in methods. Accepted as a known gap, matching Innoventa's own existing risk tolerance, not
+silently fixed.
+
+**Every issued token's `sub` claim is the row `id`, not the email** — this had to change together
+with the provider column: once the same email can be ambiguous, only the id is guaranteed unique.
+`IdentityUserDetailsService.loadUserByUsername` still takes email as its parameter (what the user
+types to log in, scoped to `Provider.LOCAL` only) but returns `UserDetails` built with the row's
+`id` as username; `OAuth2LoginSuccessHandler`'s session token-swap does the same. This was a
+breaking change for the one real consumer that existed — Moneta's `workspaces.owner_subject`
+was keyed by the old email-shaped subject; the existing row was migrated in-place (`UPDATE
+workspaces SET owner_subject = 'SU' WHERE owner_subject = 'ihontarenko@gmail.com'`, run directly
+against the dev MySQL container, not a new Moneta migration file) rather than left orphaned.
+
+**Credentials**: `application-sensitive.yml` (gitignored) reuses Innoventa's actual Google/GitHub
+OAuth app client-id/secret verbatim, copied by explicit instruction rather than provisioning new
+apps. This only actually works once Identity's own callback URLs are registered on those same apps:
+- **Google** supports multiple authorized redirect URIs on one OAuth client — add
+  `http://localhost:9090/login/oauth2/code/google` (plus the prod equivalent) alongside Innoventa's
+  existing one in Google Cloud Console → Credentials → this OAuth client. Non-breaking for Innoventa.
+- **GitHub OAuth Apps only support ONE callback URL each** — Innoventa's existing GitHub app cannot
+  simultaneously serve both `http://innoventa.net/login/oauth2/code/github` and
+  `http://localhost:9090/login/oauth2/code/github`. Either create a second GitHub OAuth App for
+  Identity (new client-id/secret, update `application-sensitive.yml`) or repoint the existing app's
+  callback URL (breaks Innoventa's GitHub login until it's updated too). **Not yet resolved — GitHub
+  login will fail with a redirect_uri mismatch until one of these is done manually in GitHub's
+  Developer Settings.**
 
 ## Open Items
 
 Scaffolded but not yet built:
 
-- No registration / password-reset / email-verification flow yet — only a seeded admin user exists.
+- No registration / password-reset / email-verification flow yet — only a seeded admin user exists
+  (self-service account management for an *already-authenticated* user now exists — see "Web UI"
+  above — but there's still no path for an anonymous person to create an account or recover access).
+- No REST API for account operations yet (see "Web UI" above) — add `AccountRestController` when
+  Innoventa's migration onto this service actually starts, not before.
+- No persisted `OAuth2Authorization`/`OAuth2AuthorizationConsent` store (registered-client repo is
+  in-memory) — session/consent management UI isn't buildable until this exists.
 - No refresh-token revocation store (Innoventa's current local auth has one in Redis; this service
   doesn't yet).
-- Persisted signing key (see above) — required before Innoventa or FinanceMonitor point at this
+- Persisted signing key (see above) — required before Innoventa or Moneta point at this
   service for real.
 - Client secrets in `application.yml` are dev defaults; production needs real generated secrets
   supplied via environment variables.

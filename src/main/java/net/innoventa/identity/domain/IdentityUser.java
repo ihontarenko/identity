@@ -2,6 +2,7 @@ package net.innoventa.identity.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.innoventa.identity.security.oauth2.Provider;
 
 import java.time.LocalDateTime;
 
@@ -19,11 +20,19 @@ public class IdentityUser {
     @Column(length = 36, nullable = false)
     private String id;
 
-    @Column(nullable = false, length = 128, unique = true)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    @Builder.Default
+    private Provider provider = Provider.LOCAL;
+
+    @Column(nullable = false, length = 128)
     private String email;
 
     @Column(name = "display_name", length = 255)
     private String displayName;
+
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
 
     @Column(name = "hashed_password", length = 256)
     private String hashedPassword;
@@ -31,6 +40,11 @@ public class IdentityUser {
     @Column(nullable = false)
     @Builder.Default
     private boolean enabled = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    @Builder.Default
+    private Role role = Role.USER;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
