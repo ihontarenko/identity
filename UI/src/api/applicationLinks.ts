@@ -5,6 +5,7 @@ export interface ApplicationLinks {
   innoventaUrl: string | null
   monetaUrl: string | null
   centralUrl: string | null
+  tesseraUrl: string | null
 }
 
 async function fetchApplicationLinks(): Promise<ApplicationLinks> {

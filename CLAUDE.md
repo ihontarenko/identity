@@ -19,17 +19,20 @@ tokens. Roles, permissions, and workspace/persona scoping stay local to each app
 # Build
 mvn clean package -DskipTests
 
-# Run (H2 dev profile, default) — listens on port 9090
+# Run (MySQL, the no-flag default) — listens on port 9090
 mvn spring-boot:run
 
-# Run with MySQL / PostgreSQL
-mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+# Run against PostgreSQL instead
 mvn spring-boot:run -Dspring-boot.run.profiles=postgresql
 ```
 
+MySQL must be reachable before startup — `docker compose up -d mysql` from the workspace root
+provisions the `identity` database/user. There is no embedded-database fallback: H2 was removed
+because an H2 file running `MODE=PostgreSQL` made local dev green against a dialect nothing is ever
+deployed on.
+
 JWKS is published at `/oauth2/jwks` (Spring Authorization Server's default) and OIDC discovery at
-`/.well-known/openid-configuration`. Swagger UI is at `/swagger-ui.html`. H2 console (dev only) is at
-`/h2-console`.
+`/.well-known/openid-configuration`. Swagger UI is at `/swagger-ui.html`.
 
 Default seeded user: `ihontarenko@gmail.com` / `admin` — change after first login.
 
@@ -39,7 +42,8 @@ Default seeded user: `ihontarenko@gmail.com` / `admin` — change after first lo
 - **Spring Authorization Server** — OAuth2 / OIDC, RS256-signed JWTs, JWKS
 - **Spring Security** — form login for the authorization endpoint's user-facing pages
 - **Spring Data JPA + Hibernate + Flyway** — `identity_users` is the only table so far
-- **Databases**: H2 (default/dev), MySQL, PostgreSQL — same three-profile pattern as `Innoventa/BE`
+- **Databases**: MySQL (default), PostgreSQL (opt-in `postgresql` profile) — same two-dialect
+  pattern as every other product here
 
 ## Architecture
 
@@ -103,8 +107,8 @@ service does not model per-app roles.
 ## Database Migrations
 
 Same convention as `Innoventa/BE`: Flyway only, `ddl-auto: validate`, one file per version under
-`src/main/resources/db/migration/{h2,mysql,postgresql}/`, named `V{6-digit}__{description}.sql`.
-Write migrations compatible with all three dialects (`CHECK` constraints instead of `ENUM`, no
+`src/main/resources/db/migration/{mysql,postgresql}/`, named `V{6-digit}__{description}.sql`.
+Write migrations compatible with both dialects (`CHECK` constraints instead of `ENUM`, no
 dialect-specific syntax outside the per-dialect `ENGINE=...`/charset lines already isolated in the
 `mysql` folder).
 

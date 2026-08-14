@@ -3,10 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
-// Build output lands directly in the Spring Boot app's static resource folder — no separate
-// copy step, no frontend-maven-plugin. SecurityConfiguration.defaultSecurityFilterChain permits
-// the resulting paths (/, /assets/**, /index.html) and SinglePageApplicationController forwards
-// every other client-side route to index.html.
+// Build output lands directly in the backend's static resource folder (../BE/src/main/resources/
+// static), built by BE/pom.xml's frontend-maven-plugin so `mvn spring-boot:run` serves the freshly
+// built SPA. SecurityConfiguration.defaultSecurityFilterChain permits the resulting paths (/,
+// /assets/**, /index.html) and SinglePageApplicationController forwards every other client-side route
+// to index.html. `emptyOutDir: true` is required since that folder is outside this UI project's root.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -15,7 +16,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../src/main/resources/static',
+    outDir: '../BE/src/main/resources/static',
     emptyOutDir: true,
   },
   server: {

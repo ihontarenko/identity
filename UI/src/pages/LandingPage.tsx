@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CentralMark } from "@/components/icons/CentralMark"
 import { InnoventaMark } from "@/components/icons/InnoventaMark"
 import { MonetaMark } from "@/components/icons/MonetaMark"
+import { TesseraMark } from "@/components/icons/TesseraMark"
 import { useAuth } from "@/context/AuthContext"
 import { useApplicationLinks } from "@/api/applicationLinks"
 
@@ -46,7 +47,7 @@ export function LandingPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
             <span className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
@@ -93,6 +94,23 @@ export function LandingPage() {
             <Button variant="outline" asChild>
               <a href={applicationLinks?.centralUrl ?? "#"}>
                 Open Central
+                <ExternalLink className="size-4" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <span className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
+              <TesseraMark className="size-5" />
+            </span>
+            <CardTitle className="mt-2">Tessera</CardTitle>
+            <CardDescription>Project and issue tracker — Scrum, Kanban, boards and dashboards.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" asChild>
+              <a href={applicationLinks?.tesseraUrl ?? "#"}>
+                Open Tessera
                 <ExternalLink className="size-4" />
               </a>
             </Button>

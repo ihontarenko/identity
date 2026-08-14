@@ -1,7 +1,9 @@
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- =============================================================================
 --  V000001  Identity users — the single source of truth for "who is this user"
 --
---  Universal SQL: H2 / MySQL / PostgreSQL compatible.
+--  Universal SQL: MySQL / PostgreSQL compatible.
 --  No database-specific types. updated_at maintained by the application layer
 --  (@PreUpdate), not triggers.
 -- =============================================================================
@@ -21,7 +23,7 @@ CREATE TABLE identity_users
 
     CONSTRAINT identity_users_pk                    PRIMARY KEY (id),
     CONSTRAINT identity_users_unique_email_provider UNIQUE (email, provider)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX index_identity_users_email          ON identity_users (email);
 CREATE INDEX index_identity_users_email_provider ON identity_users (email, provider);

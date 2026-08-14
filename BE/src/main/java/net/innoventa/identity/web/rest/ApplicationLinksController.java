@@ -20,7 +20,8 @@ public class ApplicationLinksController {
 
     @GetMapping("/api/application-links")
     public ApplicationLinksResponse applicationLinks() {
-        return new ApplicationLinksResponse(clientUrl("innoventa"), clientUrl("moneta"), clientUrl("central"));
+        return new ApplicationLinksResponse(
+            clientUrl("innoventa"), clientUrl("moneta"), clientUrl("central"), clientUrl("tessera"));
     }
 
     private String clientUrl(String clientKey) {

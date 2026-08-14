@@ -1,7 +1,7 @@
 -- =============================================================================
 --  V000001  Identity users — the single source of truth for "who is this user"
 --
---  Universal SQL: H2 / MySQL / PostgreSQL compatible.
+--  Universal SQL: MySQL / PostgreSQL compatible.
 --  No database-specific types. updated_at maintained by the application layer
 --  (@PreUpdate), not triggers.
 -- =============================================================================

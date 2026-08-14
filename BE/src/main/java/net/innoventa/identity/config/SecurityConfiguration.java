@@ -18,7 +18,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -124,19 +123,8 @@ public class SecurityConfiguration {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                // H2 console (dev-only — disabled outright on the mysql/postgresql profiles, see
-                // application.yml) is a bundled third-party webapp with no idea Spring Security's
-                // CSRF protection exists: its own login.do form has no _csrf field and never will.
-                // Without this, its connect form 403s on submit even once you're authenticated into
-                // Identity — found by actually submitting that form, not just reaching the page.
-                .ignoringRequestMatchers("/h2-console/**"))
+                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
-            // Same reasoning as the CSRF exemption above: H2 console's post-login UI lays itself out
-            // with an old-school <frameset> (tree/query/toolbar frames), which the default
-            // X-Frame-Options: DENY blocks outright. sameOrigin (not disabling the header) keeps
-            // cross-origin framing/clickjacking protection for the rest of the app.
-            .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/actuator/health", "/.well-known/**").permitAll()
                 // Reachable by an unauthenticated visitor by construction (initiates/completes the
@@ -155,10 +143,10 @@ public class SecurityConfiguration {
                 .anyRequest().authenticated())
             .exceptionHandling(exceptionHandling -> exceptionHandling
                 // Same split as authorizationServerSecurityFilterChain above, and for the same
-                // reason: a browser navigating straight to a protected, non-API path (h2-console,
-                // swagger-ui, actuator) should land on the branded /login page and bounce back via
+                // reason: a browser navigating straight to a protected, non-API path (swagger-ui,
+                // actuator) should land on the branded /login page and bounce back via
                 // the saved-request cache after signing in, not dead-end on a bare 401 — which,
-                // discovered by actually hitting /h2-console while logged out rather than only
+                // discovered by actually hitting such a page while logged out rather than only
                 // testing /api/** calls, Spring Boot turns into its default Whitelabel Error Page
                 // once request.sendError(401) forwards to /error with no Thymeleaf left to render a
                 // custom one. A fetch/XHR call (Accept: application/json) still gets a plain 401,
@@ -208,7 +196,6 @@ public class SecurityConfiguration {
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
             .redirectUri(client.redirectUri())
-            .postLogoutRedirectUri(client.postLogoutRedirectUri())
             .scope(OidcScopes.OPENID)
             .scope(OidcScopes.PROFILE)
             .scope(OidcScopes.EMAIL)
@@ -221,6 +208,13 @@ public class SecurityConfiguration {
                 .accessTokenTimeToLive(Duration.ofMinutes(15))
                 .refreshTokenTimeToLive(Duration.ofDays(7))
                 .build());
+
+        // ⚠️ Optional, because not every client is a browser app that can be logged out of. An MCP
+        // client holds a token and has no session to end — and `postLogoutRedirectUri(null)` throws,
+        // so the absence has to be handled rather than passed through.
+        if (client.postLogoutRedirectUri() != null && !client.postLogoutRedirectUri().isBlank()) {
+            registeredClientBuilder.postLogoutRedirectUri(client.postLogoutRedirectUri());
+        }
 
         if (client.publicClient()) {
             registeredClientBuilder.clientAuthenticationMethod(ClientAuthenticationMethod.NONE);
@@ -242,6 +236,11 @@ public class SecurityConfiguration {
         List<String> allowedOrigins = new ArrayList<>(identityProperties.clients().values().stream()
                 .filter(IdentityProperties.ClientProperties::publicClient)
                 .map(client -> URI.create(client.redirectUri()))
+                // ⚠️ A loopback redirect is a NATIVE client, not a browser one — an MCP client opens the
+                // system browser and listens on 127.0.0.1 for the code. It makes no cross-origin request
+                // to this service ever, so adding its host here would widen CORS for a page served from
+                // 127.0.0.1 in exchange for nothing.
+                .filter(redirectUri -> !isLoopback(redirectUri))
                 .map(redirectUri -> redirectUri.getScheme() + "://" + redirectUri.getAuthority())
                 .distinct()
                 .toList());
@@ -254,6 +253,20 @@ public class SecurityConfiguration {
         UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
         corsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
         return corsConfigurationSource;
+    }
+
+    /**
+     * Whether a redirect goes back to the machine the client is running on.
+     *
+     * <p>⚠️ <strong>{@code 127.0.0.1} and {@code [::1]}, never {@code localhost}</strong> — and that is
+     * not pedantry, it is what Spring Authorization Server itself matches on. RFC 8252 §7.3 says a
+     * native client must use the literal address because {@code localhost} can be redirected by a hosts
+     * file, and the server's own port-agnostic loopback matching follows it. A registration written
+     * {@code http://localhost/callback} would be compared literally and never match the ephemeral port
+     * the client actually listened on.
+     */
+    private static boolean isLoopback(URI redirectUri) {
+        return "127.0.0.1".equals(redirectUri.getHost()) || "[::1]".equals(redirectUri.getHost());
     }
 
     /**

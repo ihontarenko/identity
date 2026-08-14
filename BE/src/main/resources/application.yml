@@ -16,20 +16,19 @@ spring:
             redirect-uri: "${IDENTITY_ISSUER:http://localhost:9090}/login/oauth2/code/github"
             scope: read:user, user:email
 
+  # MySQL is the no-flag default, the same shape every product in this workspace now uses. H2 used
+  # to be the default here and is gone entirely: an H2 file running MODE=PostgreSQL made local dev
+  # green against a dialect nothing is ever deployed on, so a MySQL-only failure was only ever
+  # discovered later. PostgreSQL stays available as the opt-in `postgresql` profile below.
   datasource:
-    url: jdbc:h2:file:./H2/H2DB;AUTO_SERVER=TRUE;MODE=PostgreSQL;NON_KEYWORDS=VALUE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    url: ${IDENTITY_DB_URL:jdbc:mysql://localhost:3306/identity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci}
+    username: ${IDENTITY_DB_USERNAME:identity}
+    password: ${IDENTITY_DB_PASSWORD:identity}
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: IDENTITY-POOL
-      maximum-pool-size: 5
+      maximum-pool-size: 10
       minimum-idle: 2
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
   jpa:
     hibernate:
@@ -38,12 +37,12 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
   flyway:
     enabled: true
-    locations: classpath:db/migration/h2
+    locations: classpath:db/migration/mysql
     baseline-on-migrate: true
     validate-on-migrate: true
     out-of-order: true
@@ -124,9 +123,35 @@ identity:
     # tracing that interceptor, not by guessing.
     central:
       client-id: ${IDENTITY_CENTRAL_CLIENT_ID:innoventa_central-web}
-      redirect-uri: ${IDENTITY_CENTRAL_REDIRECT_URI:http://localhost:5040/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_CENTRAL_POST_LOGOUT_REDIRECT_URI:http://localhost:5040}
+      redirect-uri: ${IDENTITY_CENTRAL_REDIRECT_URI:http://localhost:5210/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_CENTRAL_POST_LOGOUT_REDIRECT_URI:http://localhost:5210}
       audience: innoventa_central
+      public-client: true
+    # Public client — Tessera's UI (the Jira-style tracker), same shape as moneta/central above
+    # (no secret, PKCE via requireProofKey). audience "tessera" is what Tessera/BE's own
+    # SecurityConfiguration.jwtDecoder requires (tessera.security.audience), and must also be present
+    # in Central's accepted-audiences allow-list for Tessera to read shared translations.
+    tessera:
+      client-id: ${IDENTITY_TESSERA_CLIENT_ID:tessera-web}
+      redirect-uri: ${IDENTITY_TESSERA_REDIRECT_URI:http://localhost:5050/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_TESSERA_POST_LOGOUT_REDIRECT_URI:http://localhost:5050}
+      audience: tessera
+      public-client: true
+    # The Model Context Protocol client — Claude Desktop and anything else that speaks MCP, connecting
+    # to Tessera's /api/mcp. Public and PKCE like the browser clients, and the same `tessera` audience,
+    # because it reaches the same resource server and every tool call is authorized by the same engine.
+    #
+    # ⚠️ A LOOPBACK REDIRECT, and the literal address matters. A native client opens the system browser
+    # and listens on 127.0.0.1 on a port it cannot know in advance; Spring Authorization Server matches
+    # a registered loopback URI ignoring the port, per RFC 8252 §7.3 — but only for the literal
+    # 127.0.0.1 or [::1]. Written `localhost` it would be compared literally and never match.
+    #
+    # ⚠️ NO post-logout-redirect-uri, on purpose. There is no session to end: the client holds a token,
+    # and RP-initiated logout is a browser flow it has no browser for.
+    tessera-mcp:
+      client-id: ${IDENTITY_TESSERA_MCP_CLIENT_ID:tessera-mcp}
+      redirect-uri: ${IDENTITY_TESSERA_MCP_REDIRECT_URI:http://127.0.0.1/callback}
+      audience: tessera
       public-client: true
 
 logging:
@@ -136,30 +161,6 @@ logging:
     org.flywaydb: INFO
   pattern:
     console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%-5level){highlight} %clr([%15.15t]){faint} %clr(%-40.40logger{36}){cyan} : %msg%n"
-
----
-spring:
-  config:
-    activate:
-      on-profile: mysql
-  flyway:
-    locations: classpath:db/migration/mysql
-    out-of-order: true
-  datasource:
-    url: ${IDENTITY_DB_URL:jdbc:mysql://localhost:3306/identity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci}
-    username: ${IDENTITY_DB_USERNAME:identity}
-    password: ${IDENTITY_DB_PASSWORD:identity}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-  h2:
-    console:
-      enabled: false
-  jpa:
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
 
 ---
 spring:
@@ -177,9 +178,6 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
-  h2:
-    console:
-      enabled: false
   jpa:
     properties:
       hibernate:
