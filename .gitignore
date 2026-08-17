@@ -39,4 +39,4 @@ output/
 # the moment somebody edits an issue elsewhere, and a merge conflict in it would be meaningless.
 # (Innoventa and Tessera get this for free: their repos are BE/ and UI/, so the mirror at the
 # product root is untracked by both. Identity's repo root IS the product root, so it needs saying.)
-/.tesseraMirror/
+/.tessera/
