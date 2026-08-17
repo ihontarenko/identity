@@ -101,8 +101,34 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
 
+jmouse:
+  access:
+    policy:
+      # ⚠️ NO LOCATIONS MEANS THE FEATURE IS OFF — no bean appears at all, the document is never read,
+      # and the seed never runs. A location that IS configured and matches nothing is the opposite case
+      # and refuses to start, which is the failure worth having: somebody asked for a file.
+      name: identity
+      locations:
+        - classpath:policy/identity.jmp
+
 identity:
   issuer: ${IDENTITY_ISSUER:http://localhost:9090}
+
+  bootstrap:
+    # Who holds the way back in — the one assignment the policy document makes rather than a screen,
+    # because the screen is behind it.
+    #
+    # ⚠️ A DEFAULT IS SHIPPED ON PURPOSE. The document writes `${identity.bootstrap.owner}`, and a
+    # placeholder with no property behind it fails the boot by the policy loader's own rule. This
+    # value is the account V000001 seeds, so a fresh installation comes up with somebody able to open
+    # the access screen.
+    #
+    # ⚠️ It may be a row id or a LOCAL email address, and it is RESOLVED to the row id before anything
+    # is written — every grant here is keyed on the id. Written through unresolved it would produce an
+    # assignment that parses, projects onto the access screen, and grants absolutely nothing. A handle
+    # naming nobody stops the boot rather than leaving a row that looks like a grant.
+    owner: ${IDENTITY_BOOTSTRAP_OWNER:ihontarenko@gmail.com}
+
   clients:
     # Confidential client — Innoventa hasn't migrated onto this service yet, so this entry is
     # provisional. Left exactly as-is (secret + HTTP Basic, no PKCE) when moneta below

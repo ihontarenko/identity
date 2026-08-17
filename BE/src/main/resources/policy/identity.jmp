@@ -1,0 +1,188 @@
+# =============================================================================
+#  Identity's own authorization, written down.
+#
+#  ⚠️ WHAT THIS GOVERNS, AND WHAT IT DOES NOT. Identity is centralized here;
+#  authorization is not. Every permission below is about IDENTITY'S OWN SCREENS
+#  — who may raise an account, disable one, delete one, hand out a grant. None
+#  of it is written into a token, and no other product asks this service what a
+#  person may do: Innoventa, Moneta, Tessera and WiQ each answer that from
+#  their own rows, exactly as before. A product looking here for "may this
+#  person edit an issue" is the mistake this paragraph exists to name first.
+#
+#  ⚠️ WHAT THIS FILE IS. It is the VOCABULARY — the floors, the permissions, and
+#  what each role carries — and it is the SEED: at the first start `PolicySeeder`
+#  writes the roles, their bundles and the bootstrap assignment into `access_*`
+#  rows, once. From then on THE ENGINE READS ROWS AND NOTHING ELSE.
+#  `AccessStorageConfiguration` refuses the composition that would otherwise
+#  union this document back over the tables, because a permission taken off a
+#  role through the access screen must not go on being granted by the file it
+#  was seeded from.
+#
+#  So: a line removed from this file is a row removed from the table, on the
+#  next start whose rendered form has moved. It is not a second opinion the
+#  engine consults.
+#
+#  ⚠️ A SEMANTIC CHANGE HERE RE-SEEDS ON THE NEXT START, and re-seeding brings
+#  the tables back in line with this file — including undoing an edit somebody
+#  made on the access screen to a role this file also declares. That is the
+#  intended trade and the reason the ledger compares the RENDERED document
+#  rather than the file text: reformatting is not a policy change, and must not
+#  read as one.
+#
+#  ⚠️ WHAT IT REPLACES. `identity_users.role`, an enum of exactly two values,
+#  plus one filter-chain matcher on `/api/admin/**`. That is a single boolean:
+#  an installation wanting somebody who may add people but not delete them had
+#  nowhere to say so. The cutover itself is ID-4; this file is the vocabulary it
+#  cuts over to, and until then `ROLE_ADMIN` is still what actually refuses.
+# =============================================================================
+
+policy "identity" {
+
+    # ── The vocabulary ────────────────────────────────────────────────────────
+    #
+    # ⚠️ A permission must be `namespace:action`. The colon is what the parser
+    # identifies the shape BY, since nothing else tells a permission from one of
+    # the language's own keywords — so a single-word name cannot be written down
+    # at all. `DeclaredPolicyValidator` checks this block against `Permissions`
+    # in BOTH directions: a name here no constant matches fails the boot, and so
+    # does a constant no line here declares.
+    #
+    # The test each name had to pass: could somebody plausibly want it ON
+    # WITHOUT the others? Three of the seven are splits of what is one power
+    # today, and each split is the whole point of the exercise.
+    declare permissions {
+
+        # ⚠️ NOT THE SAME AS `user:create`. The register discloses every account
+        # in the installation and its email address; raising one account does
+        # not require the ability to enumerate everybody. Today both are
+        # `ROLE_ADMIN`, which is why an integration that only ever creates users
+        # currently has to be able to read them all.
+        user:read           "See the register of accounts"
+
+        user:create         "Raise a new account"
+        user:edit           "Edit an account's profile — display name, email"
+
+        # ⚠️ `user:disable` IS NOT `user:delete`, AND THIS IS THE MOST OBVIOUSLY
+        # WRONG THING ABOUT THE CURRENT MODEL. One is reversible; the other is a
+        # HARD delete with no audit row behind it. They have been the same
+        # permission only because there was only ever one permission.
+        user:disable        "Block and unblock an account"
+        user:delete         "Delete an account permanently"
+
+        # ⚠️ NOT `user:edit`. Setting somebody's password is impersonation with
+        # a delay — whoever sets it can then sign in as them. Fixing a typo in a
+        # display name is not. Folded together, anybody who may do the second
+        # may do the first.
+        user:password       "Set another person's password"
+
+        # ⚠️ The one that hands out the others, and installation-wide by
+        # nature: editing a role changes it for everybody at once, and reading
+        # who holds what is a disclosure surface in its own right.
+        #
+        # ⚠️ THERE IS DELIBERATELY NO `client:administer`. Registered clients
+        # live in `application.yml`, not in the database, so there is no screen
+        # to gate — and a permission invented for a surface that does not exist
+        # is how a catalog fills with names nobody holds. The day the
+        # registered-client repository stops being in-memory is the day that
+        # permission is written, in the ticket that does it.
+        #
+        # ⚠️ AND NO `account:self`. Self-service is the `@SELF` scope on the
+        # permissions above, not a permission of its own — otherwise there are
+        # two mechanisms for one idea and a screen has to consult both.
+        access:administer   "Edit the roles this installation shares, and see who holds what"
+    }
+
+    # ── The floors ────────────────────────────────────────────────────────────
+    #
+    # ⚠️ DECLARATION ORDER IS WIDTH ORDER. The rank of each floor in the covering
+    # chain is its position in this block, and there is deliberately no rank
+    # column anywhere.
+    #
+    # Two floors — the shortest ladder of any product in this workspace, and
+    # short honestly rather than by omission. Tessera has `@PROJECT` because a
+    # grant is held at a project; WiQ has `@CATEGORY` because one contains its
+    # own subtree. Identity has no such container: there are no organizations,
+    # no tenants and no teams, so a third floor would be declarable and
+    # unfillable — an instance in the covering chain that never resolves, which
+    # is a grant that parses, projects onto a screen, and decides nothing.
+    #
+    # Neither floor takes a `parameter=`, and that is why this service needs no
+    # `AccessTargetResolver` at all: a parameter is how a route spells its PLACE
+    # into the URL, and neither of these has a place to spell.
+    declare scopes {
+        @GLOBAL   everything
+        @SELF     'own-rows'
+    }
+
+    # ── The two roles ─────────────────────────────────────────────────────────
+    #
+    # ⚠️ BOTH ARE `assignable @GLOBAL`, and that is a real difference from
+    # Tessera rather than a copy made carelessly. Tessera's three roles are
+    # assignable at a project because there is a project to hold them. Here
+    # there is no container, so every role is installation-wide by construction.
+    #
+    # `assignable @SCOPE` comes from the grammar and from nowhere else. Deriving
+    # it from the widest scope in the bundle would be right by accident for
+    # these two and undefined for a role that bundles nothing.
+
+    # Everything about accounts, and nothing about who may hand out powers.
+    declare role GLOBAL_USER_ADMINISTRATOR assignable @GLOBAL {
+        @GLOBAL  user:read
+        @GLOBAL  user:create
+        @GLOBAL  user:edit
+        @GLOBAL  user:disable
+        @GLOBAL  user:password
+    }
+
+    # ── The way back in ───────────────────────────────────────────────────────
+    #
+    # An authorization system has a chicken-and-egg at its root: somebody needs
+    # rights before anybody can be granted rights.
+    #
+    # ⚠️ DELIBERATELY NOT A SUPERUSER. There is no `@GLOBAL *` here and there
+    # will not be one — a wildcard is convenient exactly where convenience is
+    # worst. It carries `user:read` and nothing else about accounts, because
+    # handing out a grant means naming a person and a screen that cannot list
+    # accounts cannot do that. It cannot create, disable, rename or delete
+    # anybody: those come from the role above, which somebody can take away.
+    declare role GLOBAL_ACCESS_ADMINISTRATOR assignable @GLOBAL {
+        @GLOBAL  access:administer
+        @GLOBAL  user:read
+    }
+
+    # ⚠️ `user:delete` IS IN NEITHER BUNDLE, ON PURPOSE. It is the irreversible
+    # one, and the deletion behind it takes the row with no audit trail. It is
+    # granted PERSONALLY, on the overrides tab, so that "who can permanently
+    # delete an account here" is answered by a list of named people rather than
+    # by expanding a role. A permission nobody holds is the correct default for
+    # the only act nobody can undo.
+
+    # ── Who holds the way back in ─────────────────────────────────────────────
+    #
+    # The one assignment written down rather than made on a screen, because it
+    # is the one that cannot be made on a screen: the screen is behind it.
+    #
+    # ⚠️ SIMPLER THAN TESSERA'S, AND THE DIFFERENCE IS WHERE ACCOUNTS COME FROM.
+    # Tessera's members are provisioned on first sign-in, so at the moment its
+    # document is read there may be no identifier to name — which is why its
+    # grant has to fire from two places. Identity's seeded administrator is a
+    # MIGRATION ROW that exists before the first boot, exactly like Innoventa's
+    # `${innoventa.bootstrap.owner}`, so one trigger point is enough.
+    #
+    # ⚠️ THE HANDLE IS RESOLVED, AND IT HAS TO BE. `identity.bootstrap.owner` is
+    # whatever a person can write down — an email or a row id — and every grant
+    # in this installation is keyed on the ROW ID. Tessera learned this the
+    # expensive way: written straight through, the raw handle produced a row
+    # that parsed, projected, appeared on the access screen, and granted
+    # ABSOLUTELY NOTHING. `SubjectHandles` resolves it, and a handle nobody
+    # answers to stops the boot rather than leaving a row that looks like a
+    # grant.
+    #
+    # ⚠️ AND THE PROPERTY MUST EXIST. A placeholder with no property behind it
+    # fails the boot by the loader's own rule — which is the right failure, and
+    # the reason `application.yml` ships a default rather than leaving it unset.
+    assign subject ${identity.bootstrap.owner} {
+        grants GLOBAL_ACCESS_ADMINISTRATOR @GLOBAL
+        grants GLOBAL_USER_ADMINISTRATOR   @GLOBAL
+    }
+}
