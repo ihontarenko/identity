@@ -24,6 +24,19 @@
         <lombok.version>1.18.32</lombok.version>
         <springdoc.version>2.5.0</springdoc.version>
         <testcontainers.version>1.19.8</testcontainers.version>
+        <!-- ⚠️ One version for every jMouse artifact, and it has to stay that way: jmouse-access-el
+             parses the policy document with jmouse-el's parser and is built against that exact
+             build. A mismatched pair resolves, starts, and dies on the first policy read.
+
+             ⚠️ These jars are compiled against Spring Boot 4 while this service is on 3.3.2, and
+             that is deliberate rather than overlooked — the library goes out of its way to work on
+             both. AccessFlywayAutoConfiguration orders itself against Boot's Flyway initializer by
+             BEAN NAME because the type moved package between the two majors, and
+             AccessJpaAutoConfiguration lists BOTH majors' HibernateJpaAutoConfiguration by name in
+             its `afterName`. Nothing here imports a Boot 4 type. Identity's own parent still
+             manages every Spring artifact, so the transitive spring-boot-* pins in those poms do
+             not win. -->
+        <jmouse.version>1.0.0-b20260802</jmouse.version>
     </properties>
 
     <dependencyManagement>
@@ -95,6 +108,52 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Authorization — for Identity's OWN screens, and for nothing else.
+             ⚠️ "Identity is centralized here; authorization is not" still holds. What arrives with
+             these jars gates who may raise, disable or delete an ACCOUNT, and who may hand out a
+             grant. No permission ever reaches a token, and no other product asks this service what
+             somebody may do — theirs stay local, exactly as before. -->
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-enforcement</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-spring-boot</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+        <!-- ⚠️ jmouse-access-jpa OWNS every access_* table, mapping included, and migrates them
+             against a history table of its own — so Identity writes no @Entity over one and adds
+             `org.jmouse.access.jpa.entity` to its @EntityScan. Forgetting that line starts cleanly
+             and dies on the first query, because Hibernate validates only what it was given. -->
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-jpa</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+        <!-- The policy document — the grammar and the model it binds to.
+             ⚠️ INERT UNTIL ID-3. The auto-configuration wakes up only when
+             `jmouse.access.policy.locations` names something, and this service configures no
+             locations yet, so no document is read and no seed runs. They are on the classpath now
+             so that writing `policy/identity.jmp` is a file and two lines of yaml rather than a
+             dependency change with a rebuild behind it. -->
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-policy</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-el</artifactId>
+            <version>${jmouse.version}</version>
         </dependency>
 
         <!-- Actuator -->

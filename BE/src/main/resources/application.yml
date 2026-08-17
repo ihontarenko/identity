@@ -44,6 +44,17 @@ spring:
     enabled: true
     locations: classpath:db/migration/mysql
     baseline-on-migrate: true
+    # ⚠️ 0, and it is load-bearing rather than tidy. `baseline-on-migrate` baselines a NON-EMPTY schema
+    # at `baseline-version`, which defaults to 1 — and Identity's first migration IS version 1, so it
+    # would be skipped as "already applied". That never happened while this schema started empty. It
+    # starts non-empty now: `jmouse-access-jpa` brings its own migrations and its own history table,
+    # and they run first so the entity manager can validate against the tables they create.
+    #
+    # Found by booting this service against a fresh throwaway schema: V000002 died with "table
+    # `identity_users` doesn't exist" — two steps from the cause, because the migration that creates it
+    # had been silently marked as already applied. Tessera and Central each hit the identical failure.
+    # At 0 the baseline sits below everything and every migration still applies.
+    baseline-version: 0
     validate-on-migrate: true
     out-of-order: true
 
@@ -137,9 +148,40 @@ identity:
       post-logout-redirect-uri: ${IDENTITY_TESSERA_POST_LOGOUT_REDIRECT_URI:http://localhost:5050}
       audience: tessera
       public-client: true
-    # The Model Context Protocol client — Claude Desktop and anything else that speaks MCP, connecting
-    # to Tessera's /api/mcp. Public and PKCE like the browser clients, and the same `tessera` audience,
-    # because it reaches the same resource server and every tool call is authorized by the same engine.
+    # Public client — WiQ's UI (the knowledge product), same shape as the four above. audience "wiq" is
+    # what WiQ/BE's own SecurityConfiguration.jwtDecoder requires (wiq.security.audience).
+    #
+    # ⚠️ ONE AUDIENCE FOR SEVERAL CALLERS, and that is WiQ's whole architecture rather than an oversight.
+    # Tessera's wiki tab and Innoventa's pages call WiQ DIRECTLY FROM THE BROWSER, carrying the reader's
+    # own token — so what arrives at 8110 is always a `wiq` token minted for this client, whichever
+    # product's interface the person happens to be looking at. There is no token relay and no
+    # product-to-product secret anywhere on that path (WIQ-1 §1). What makes those cross-origin calls
+    # work is CORS on WiQ's side, not a second registration here.
+    #
+    # ⚠️ NOT in Central's accepted-audiences, unlike `tessera`. WiQ does not use Central at all — its
+    # `t(key, fallback)` is backed by a local provider that returns the fallback (WIQ-1 §15) — so adding
+    # it there would grant a reach nothing asks for.
+    wiq:
+      client-id: ${IDENTITY_WIQ_CLIENT_ID:wiq-web}
+      redirect-uri: ${IDENTITY_WIQ_REDIRECT_URI:http://localhost:5060/login/oauth2/code/identity}
+      post-logout-redirect-uri: ${IDENTITY_WIQ_POST_LOGOUT_REDIRECT_URI:http://localhost:5060}
+      audience: wiq
+      public-client: true
+    # ⚠️ UNUSED, AND IT CANNOT BE USED — kept only so nobody registers it a second time.
+    #
+    # A Model Context Protocol client has nowhere to be told a client id: it reads the authorization
+    # server's metadata and registers ITSELF (RFC 7591), and absent a `registration_endpoint` it refuses
+    # outright — Claude Code fails with "Incompatible auth server: does not support dynamic client
+    # registration" after every other discovery step has succeeded. Identity has no such endpoint, so this
+    # entry was never reachable by the thing it was written for.
+    #
+    # Tessera therefore issues its own credential for its own protocol endpoint, confined to it — see
+    # Tessera/docs/adr/0020-tessera-issues-its-own-protocol-credential.md. Deleting this block would be
+    # correct; it stays because the reasoning above is the useful part, and this is where somebody will
+    # look for it.
+    #
+    # The original intent, for the record: public and PKCE like the browser clients, and the same
+    # `tessera` audience, because it reaches the same resource server.
     #
     # ⚠️ A LOOPBACK REDIRECT, and the literal address matters. A native client opens the system browser
     # and listens on 127.0.0.1 on a port it cannot know in advance; Spring Authorization Server matches

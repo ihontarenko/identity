@@ -33,3 +33,10 @@ output/
 # frontend-maven-plugin regenerates this from UI/ on every build (emptyOutDir: true) — never
 # hand-edited, never committed.
 /BE/src/main/resources/static/
+
+# Tessera issue mirror — Tessera is the record and this is a copy of it, re-written on every write
+# so a future session can read the tickets with no server running. It is not source, it goes stale
+# the moment somebody edits an issue elsewhere, and a merge conflict in it would be meaningless.
+# (Innoventa and Tessera get this for free: their repos are BE/ and UI/, so the mirror at the
+# product root is untracked by both. Identity's repo root IS the product root, so it needs saying.)
+/.tesseraMirror/
