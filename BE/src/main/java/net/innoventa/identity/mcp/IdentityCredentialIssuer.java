@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
  * <p>It follows that <strong>a protocol client here is bounded by the same grants the browser is</strong>
  * — see the epic's invariant. There is no persona to widen, and nothing to switch off separately.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class IdentityCredentialIssuer implements CredentialIssuer {

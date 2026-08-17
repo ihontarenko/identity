@@ -48,6 +48,7 @@ import static org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256;
  * so ending a connection takes effect on the next request rather than when a month-old token finally
  * expires. Without it, "disconnect" would be a button that does nothing for four weeks.
  */
+@OnMcpConfigured
 @Service
 @RequiredArgsConstructor
 public class McpCredentialService {

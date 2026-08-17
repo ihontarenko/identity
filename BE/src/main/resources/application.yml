@@ -136,14 +136,20 @@ identity:
   issuer: ${IDENTITY_ISSUER:http://localhost:9090}
 
   mcp:
-    # ⚠️ NO DEFAULT, AND THAT IS THE POINT. Tessera generates one per run when unset, which is right on
-    # a laptop and wrong here: this service is what every other product's sign-in depends on, and a
-    # restart that silently invalidates every protocol connection is a failure nobody would attribute
-    # to a missing property. At least 32 bytes, or the application refuses to start.
+    # ⚠️ `signing-secret` IS DELIBERATELY NOT DECLARED HERE, and its absence is what switches the whole
+    # Model Context Protocol feature OFF. Set IDENTITY_MCP_SIGNING_SECRET (at least 32 bytes) to turn it
+    # on; relaxed binding maps that environment variable straight onto `identity.mcp.signing-secret`.
     #
-    # It signs every protocol credential, and it is the confinement: a token presented to Innoventa,
-    # Moneta, Tessera or WiQ is not one that fails a check, it is a signature that does not verify.
-    signing-secret: ${IDENTITY_MCP_SIGNING_SECRET:}
+    # ⚠️ DO NOT "TIDY THIS UP" BY ADDING `signing-secret: ${IDENTITY_MCP_SIGNING_SECRET:}` BACK. That
+    # placeholder resolves to an EMPTY STRING when the variable is unset, which counts as the property
+    # being PRESENT — the feature switches on, the length check then refuses 0 bytes, and the whole
+    # application is dead for everybody who never wanted the protocol. That is exactly the failure this
+    # shape exists to end; see OnMcpConfigured.
+    #
+    # Why no generated default: it signs every protocol credential and it IS the confinement — a token
+    # presented to Innoventa, Moneta, Tessera or WiQ is not one that fails a check, it is a signature
+    # that does not verify. One invented per run would silently break every connection on each restart
+    # of the service every other product's sign-in depends on.
 
     # ⚠️ Deliberately not one of the audiences under `identity.clients`. A protocol credential must not
     # read as a token for any product, and two independent reasons it is refused elsewhere is one more

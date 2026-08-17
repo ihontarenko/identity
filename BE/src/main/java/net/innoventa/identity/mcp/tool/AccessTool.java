@@ -1,5 +1,6 @@
 package net.innoventa.identity.mcp.tool;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.service.AccessAdministrationService;
@@ -27,6 +28,7 @@ import java.util.Map;
  * grant it would make a sentence the shortest path to the most dangerous permission in the
  * installation. The overrides tab is where that lives, and it stays there.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class AccessTool implements ToolDefinition {

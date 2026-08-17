@@ -33,6 +33,14 @@ export function ConnectedClients() {
   const { data: connections, isLoading } = useConnections()
   const disconnectMutation = useDisconnect()
 
+  // ⚠️ null means the protocol is switched off in this installation — the section is not rendered at
+  // all, rather than rendered empty. "Nothing is connected" and "connecting is not available here" are
+  // different sentences, and showing the first when the second is true is a small lie on a security
+  // screen.
+  if (connections === null) {
+    return null
+  }
+
   const live = (connections ?? []).filter((connection) => !connection.revoked)
   const ended = (connections ?? []).filter((connection) => connection.revoked)
 

@@ -1,5 +1,6 @@
 package net.innoventa.identity.mcp.tool;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.access.IdentityScope;
 import net.innoventa.identity.security.access.Permissions;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Component;
  * and no route that names a place, so both questions are the same question and answering them
  * differently would be inventing a distinction the model does not have.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class IdentityToolAuthorizer implements ToolAuthorizer {

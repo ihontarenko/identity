@@ -1,5 +1,6 @@
 package net.innoventa.identity.web.rest;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.domain.McpCredential;
 import net.innoventa.identity.mcp.McpCredentialService;
@@ -30,6 +31,7 @@ import java.util.List;
  * expires. That is what {@code mcp_credentials} exists for: the credential is self-contained and would
  * otherwise be good for its full hour no matter what this screen said.
  */
+@OnMcpConfigured
 @RestController
 @RequestMapping("/api/account/connections")
 @RequiredArgsConstructor

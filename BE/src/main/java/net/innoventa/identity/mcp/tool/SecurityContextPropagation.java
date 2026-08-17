@@ -1,5 +1,6 @@
 package net.innoventa.identity.mcp.tool;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ThreadLocalAccessor;
 import jakarta.annotation.PostConstruct;
@@ -39,6 +40,7 @@ import org.springframework.stereotype.Component;
  * a thread that had a caller would take the caller away. Returning null keeps the snapshot honest:
  * there was nothing to carry. Spring Security's own implementation does the same.
  */
+@OnMcpConfigured
 @Component
 public class SecurityContextPropagation implements ThreadLocalAccessor<SecurityContext> {
 

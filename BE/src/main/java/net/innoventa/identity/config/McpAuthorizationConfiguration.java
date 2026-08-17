@@ -1,5 +1,6 @@
 package net.innoventa.identity.config;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletRequest;
 import net.innoventa.identity.mcp.McpAuthorizationSettings;
@@ -44,6 +45,7 @@ import static org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256;
  * else has, and presented to Innoventa or Tessera it is not a token that fails a check — it is a
  * signature that does not verify. See {@code docs/adr/0001-identity-issues-its-own-protocol-credential.md}.
  */
+@OnMcpConfigured
 @Configuration
 public class McpAuthorizationConfiguration {
 
@@ -67,12 +69,21 @@ public class McpAuthorizationConfiguration {
     }
 
     /**
-     * ⚠️ <strong>A short or missing secret stops the boot rather than being generated.</strong>
+     * ⚠️ <strong>A secret that is too SHORT stops the boot. A secret that is ABSENT does not — it
+     * switches the feature off.</strong>
      *
-     * <p>Generating one per run is what Tessera's configuration does by default, and it is right there
-     * and wrong here: this service is the thing every other product's sign-in depends on, and a restart
-     * that silently invalidates every protocol connection is a failure nobody would attribute to a
-     * missing property. Refusing at boot is the failure somebody is watching.
+     * <p>The distinction is the whole of what {@link OnMcpConfigured} exists for, and the first version
+     * did not make it: with no secret, this method threw and <strong>the entire application refused to
+     * start</strong>, for everybody, including the majority of runs that want nothing to do with the
+     * protocol. A guard that breaks the common case to protect the rare one is not a guard.
+     *
+     * <p>So absence is a choice and never reaches here — this class does not exist without the property.
+     * Sixteen bytes is a mistake, and a mistake still stops the boot, because a secret somebody set
+     * badly is worse than one they never set: it looks configured.
+     *
+     * <p>Never generated per run, in either case. It signs every protocol credential, and one invented
+     * at startup would silently break every connection on each restart of the service every other
+     * product's sign-in depends on.
      */
     private static String requireUsableSecret(String signingSecret) {
         int length = signingSecret == null

@@ -38,6 +38,7 @@ import java.util.List;
  * the origin's cookies. Setting it to anything would make the page look for a token this interface does
  * not keep and refuse everybody as signed out.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class IdentityApprovingSubject implements ApprovingSubject {

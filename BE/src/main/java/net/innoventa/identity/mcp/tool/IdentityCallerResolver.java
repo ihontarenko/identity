@@ -1,5 +1,6 @@
 package net.innoventa.identity.mcp.tool;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.domain.IdentityUser;
 import net.innoventa.identity.mcp.McpCredentialService;
@@ -44,6 +45,7 @@ import java.util.Map;
  * is no request scope on this thread, and an {@code ObjectProvider} of one hands back a proxy that is
  * never null and fails on first use.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class IdentityCallerResolver implements CallerResolver {

@@ -1,5 +1,6 @@
 package net.innoventa.identity.mcp.tool;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.domain.IdentityUser;
 import net.innoventa.identity.security.access.Permissions;
@@ -35,6 +36,7 @@ import java.util.Map;
  * {@link IdentityToolAuthorizer} resolves it against the same rows. A tool being present says nothing
  * about whether this caller may use it.
  */
+@OnMcpConfigured
 @Component
 @RequiredArgsConstructor
 public class UserTool implements ToolDefinition {

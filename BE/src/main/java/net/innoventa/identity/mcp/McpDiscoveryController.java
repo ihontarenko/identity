@@ -35,6 +35,7 @@ import java.util.Map;
  * a client, and the reason the protected-resource document below names the issuer explicitly instead of
  * letting anything infer it.
  */
+@OnMcpConfigured
 @RestController
 @RequiredArgsConstructor
 public class McpDiscoveryController {

@@ -1,5 +1,6 @@
 package net.innoventa.identity.config;
 
+import net.innoventa.identity.mcp.OnMcpConfigured;
 import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
@@ -56,6 +57,7 @@ import java.util.Set;
  * {@code jackson-bom:2.21.4} — the set Boot 4.0.7 resolves — reproduces exactly that classpath while
  * everything else here stays on 3.3.2. See the pom.
  */
+@OnMcpConfigured
 @Configuration
 public class McpConfiguration {
 
