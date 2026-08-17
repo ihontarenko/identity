@@ -2,6 +2,7 @@ package net.innoventa.identity.web.rest;
 
 import net.innoventa.identity.security.access.AccessReason;
 import net.innoventa.identity.security.access.AccessRefusedException;
+import net.innoventa.identity.service.BusinessRuleViolationException;
 import net.innoventa.identity.service.InvalidCurrentPasswordException;
 import net.innoventa.identity.service.SelfModificationException;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,20 @@ class RestExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ProblemDetail handleUserNotFound() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "User not found");
+    }
+
+    /**
+     * The request was well formed and the caller was entitled to make it — the answer is that what it
+     * asks for is not a thing this build can do.
+     *
+     * <p>⚠️ Kept apart from {@code AccessRefusedException} on purpose: a 403 tells somebody to go and
+     * ask for a permission, and this tells them to fix what they sent. Told the same thing by both, a
+     * reader learns nothing from either.
+     */
+    @ExceptionHandler(BusinessRuleViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ProblemDetail handleBusinessRuleViolation(BusinessRuleViolationException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     @ExceptionHandler(InvalidCurrentPasswordException.class)

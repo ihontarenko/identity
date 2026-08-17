@@ -8,6 +8,7 @@ import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { AccountPage } from "@/pages/AccountPage"
 import { AdminUsersPage } from "@/pages/AdminUsersPage"
+import { AccessSettingsPage } from "@/pages/AccessSettingsPage"
 import { AppearanceSettingsPage } from "@/pages/AppearanceSettingsPage"
 
 export function ApplicationRoutes() {
@@ -31,6 +32,14 @@ export function ApplicationRoutes() {
           element={
             <RequirePermission permission={PERMISSIONS.READ_USER}>
               <AdminUsersPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="/admin/access"
+          element={
+            <RequirePermission permission={PERMISSIONS.ADMINISTER_ACCESS}>
+              <AccessSettingsPage />
             </RequirePermission>
           }
         />

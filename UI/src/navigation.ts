@@ -1,4 +1,4 @@
-import { ShieldCheck, UserRound, type LucideIcon } from "lucide-react"
+import { KeyRound, ShieldCheck, UserRound, type LucideIcon } from "lucide-react"
 import { PERMISSIONS, type Permission } from "@/permissions"
 
 export interface NavigationItem {
@@ -32,6 +32,12 @@ export const navigationGroups: NavigationGroup[] = [
         path: "/admin/users",
         icon: ShieldCheck,
         requiresPermission: PERMISSIONS.READ_USER,
+      },
+      {
+        title: "Access",
+        path: "/admin/access",
+        icon: KeyRound,
+        requiresPermission: PERMISSIONS.ADMINISTER_ACCESS,
       },
     ],
   },
