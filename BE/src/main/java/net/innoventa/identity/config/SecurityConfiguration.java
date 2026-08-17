@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.oauth2.OAuth2LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -140,7 +141,19 @@ public class SecurityConfiguration {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                // ⚠️ THE PROTOCOL'S OWN POSTS ARE EXEMPT, AND THEY HAVE TO BE. CSRF defends a browser
+                // that submits on a person's behalf without their intent; the caller here is a
+                // command-line program with no cookie and no origin, which has nowhere to read an
+                // XSRF token from and nothing for one to protect. Left on, registration and the token
+                // exchange are refused before they reach a handler — and the symptom is a 302 to the
+                // login page, which a client reports as "the server does not support registration".
+                //
+                // ⚠️ /review and /approve are NOT exempt: those ARE browser posts, made by a signed-in
+                // person on the consent screen, and they are exactly what CSRF is for.
+                .ignoringRequestMatchers(
+                    "/api/agents/authorization/register",
+                    "/api/agents/authorization/token"))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
             // Same position as the authorization-server chain above, and for the same reason — one
             // answer to "where does this go", rather than two that have to be kept in step.
@@ -155,6 +168,19 @@ public class SecurityConfiguration {
                 .requestMatchers("/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/authentication/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/application-links").permitAll()
+                // The Model Context Protocol's authorization walk. ⚠️ Public BY NECESSITY: a client
+                // reads these before it holds anything, which is what they are for.
+                //
+                // ⚠️ REGISTER, AUTHORIZE AND TOKEN ONLY — the consent screen's own /review and
+                // /approve are NOT here, and must not be. They are what a signed-in person uses to
+                // grant their own access, so they fall through to `.anyRequest().authenticated()`
+                // below and are answered by the session cookie. Permitting them would let anybody who
+                // can reach this host approve a client against somebody else's account.
+                .requestMatchers(HttpMethod.POST, "/api/agents/authorization/register").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/agents/authorization/authorize").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/agents/authorization/token").permitAll()
+                // The screen itself is a page; what it does still needs a session.
+                .requestMatchers(HttpMethod.GET, "/api/agents/authorization/consent").permitAll()
                 .requestMatchers(
                     "/", "/login", "/account", "/admin/**", "/settings/**",
                     "/assets/**", "/favicon.ico", "/favicon.svg", "/index.html")
@@ -330,7 +356,21 @@ public class SecurityConfiguration {
         return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
     }
 
+    /**
+     * ⚠️ <strong>{@code @Primary} since the protocol endpoint grew a decoder of its own.</strong>
+     *
+     * <p>There are two {@link JwtDecoder} beans now — this one, RS256 over the JWKS every product
+     * trusts, and {@code mcpJwtDecoder}, HS256 over a secret only this service holds. Without a primary
+     * the context refuses to start, because the authorization-server chain asks for one by type.
+     *
+     * <p>The <em>other</em> failure this prevents is the interesting one: whichever decoder wins an
+     * unqualified injection decides what the protocol endpoint accepts, and getting it backwards is
+     * silent — the endpoint would accept exactly the token it exists to refuse and refuse the
+     * credential it exists to accept. This one is primary because every consumer except that chain
+     * means it; that chain says {@code @Qualifier("mcpJwtDecoder")} and must keep saying it.
+     */
     @Bean
+    @Primary
     JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }

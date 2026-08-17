@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/PageHeader"
+import { ConnectedClients } from "@/components/ConnectedClients"
 import { useAuth } from "@/context/AuthContext"
 import { changePassword, updateProfile } from "@/api/account"
 
@@ -174,6 +175,8 @@ export function AccountPage() {
             </CardContent>
           </Card>
         )}
+
+        <ConnectedClients />
       </div>
     </>
   )

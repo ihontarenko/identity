@@ -102,6 +102,27 @@ springdoc:
     tags-sorter: alpha
 
 jmouse:
+  mcp:
+    authorization:
+      # What the shared consent screen calls this installation, under its own heading.
+      application-name: Identity
+
+      # ⚠️ ONE ADDRESS, unlike Tessera's two. There a client reaches the API on 8100 and a person
+      # reaches the interface on 5050, so the consent screen has to be built on the browser address to
+      # find the session that interface stored. Identity bundles its UI into the backend, so both are
+      # 9090 and the whole class of "the consent screen says nobody is signed in" cannot arise here.
+      resource-url: ${IDENTITY_MCP_RESOURCE_URL:${identity.issuer:http://localhost:9090}}
+      browser-url:  ${IDENTITY_BROWSER_BASE_URL:${identity.issuer:http://localhost:9090}}
+
+      consent:
+        # ⚠️ DELIBERATELY UNSET, AND THIS IS THE CONFIGURATION THAT MATTERS. The shared screen reads
+        # this key to find a bearer token in web storage; Identity's interface keeps NO token — it is
+        # signed in by a session cookie — so leaving it empty is how the screen is told to send the
+        # origin's cookies instead. Setting it to anything makes the page look for something that is
+        # not there and refuse everybody as signed out.
+        token-storage-key: ""
+        sign-in-route: /login
+
   access:
     policy:
       # ⚠️ NO LOCATIONS MEANS THE FEATURE IS OFF — no bean appears at all, the document is never read,
@@ -113,6 +134,25 @@ jmouse:
 
 identity:
   issuer: ${IDENTITY_ISSUER:http://localhost:9090}
+
+  mcp:
+    # ⚠️ NO DEFAULT, AND THAT IS THE POINT. Tessera generates one per run when unset, which is right on
+    # a laptop and wrong here: this service is what every other product's sign-in depends on, and a
+    # restart that silently invalidates every protocol connection is a failure nobody would attribute
+    # to a missing property. At least 32 bytes, or the application refuses to start.
+    #
+    # It signs every protocol credential, and it is the confinement: a token presented to Innoventa,
+    # Moneta, Tessera or WiQ is not one that fails a check, it is a signature that does not verify.
+    signing-secret: ${IDENTITY_MCP_SIGNING_SECRET:}
+
+    # ⚠️ Deliberately not one of the audiences under `identity.clients`. A protocol credential must not
+    # read as a token for any product, and two independent reasons it is refused elsewhere is one more
+    # than strictly needed — the cheap one is the one that survives a refactor.
+    audience: ${IDENTITY_MCP_AUDIENCE:identity-mcp}
+
+    access-token-lifetime:  ${IDENTITY_MCP_ACCESS_TOKEN_LIFETIME:1h}
+    # How long a client may keep renewing before a person approves again.
+    refresh-token-lifetime: ${IDENTITY_MCP_REFRESH_TOKEN_LIFETIME:30d}
 
   bootstrap:
     # Who holds the way back in — the one assignment the policy document makes rather than a screen,

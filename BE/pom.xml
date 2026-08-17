@@ -41,6 +41,23 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- ⚠️ PINNED AHEAD OF WHAT BOOT 3.3.2 MANAGES, AND THIS IS WHAT KEEPS IDENTITY OFF BOOT 4.
+                 The Model Context Protocol SDK (ID-9) binds JSON with Jackson 3, and Jackson 3 kept its
+                 annotations in Jackson 2's package — so it needs a `jackson-annotations` newer than the
+                 2.17.2 this Boot line pins, and fails with `NoSuchFieldError: JsonFormat$Shape.POJO`
+                 without it. Tessera hit exactly this and concluded the SDK "forced the move to Boot 4";
+                 for Identity it does not — 2.21.4 is the set Tessera resolves on Boot 4.0.7, and
+                 importing it here reproduces that set exactly while everything else stays on 3.3.2.
+
+                 The whole BOM rather than the one artifact, deliberately: annotations at 2.21 beside a
+                 Boot-managed databind at 2.17.2 is a mixed Jackson nobody tested. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>2.21.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
@@ -153,6 +170,20 @@
         <dependency>
             <groupId>org.jmouse</groupId>
             <artifactId>jmouse-access-el</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+
+        <!-- The Model Context Protocol: the three authorization endpoints, the shared consent screen,
+             and the transport. ⚠️ The endpoints appear only because Identity declares a CredentialIssuer
+             bean — the module will not map public routes on somebody who has not said what minting
+             means. What is NOT in it, and stays here, is everything about a credential: the HS256
+             signing, the `cid` claim, mcp_credentials and revocation. See IdentityCredentialIssuer.
+
+             ⚠️ It brings the MCP Java SDK (Jackson 3) transitively, which is what the jackson-bom
+             import above is for. -->
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-ai-mcp-authorization</artifactId>
             <version>${jmouse.version}</version>
         </dependency>
 
