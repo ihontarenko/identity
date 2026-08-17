@@ -139,7 +139,16 @@ public class SecurityConfiguration {
                     "/", "/login", "/account", "/admin/**", "/settings/**",
                     "/assets/**", "/favicon.ico", "/favicon.svg", "/index.html")
                 .permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // ⚠️ `/api/admin/** → hasRole("ADMIN")` USED TO SIT HERE, AND ITS ABSENCE IS THE
+                // POINT. It was the real enforcement point for the whole administrative surface —
+                // AdminUserController's own javadoc said so — which meant one boolean decided six
+                // different powers, and an installation wanting somebody who may add people but not
+                // delete them had nowhere to say so.
+                //
+                // Every one of those endpoints now declares the permission it actually needs, and the
+                // access engine answers. The consequence to keep in mind: a controller method under
+                // /api/admin with no @RequiresAccess is reachable by any signed-in caller. There is no
+                // longer a blanket rule underneath to catch it.
                 .anyRequest().authenticated())
             .exceptionHandling(exceptionHandling -> exceptionHandling
                 // Same split as authorizationServerSecurityFilterChain above, and for the same

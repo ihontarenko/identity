@@ -6,7 +6,6 @@ export interface AdminUser {
   email: string
   displayName: string | null
   provider: string
-  role: "USER" | "ADMIN"
   enabled: boolean
   createdAt: string
 }

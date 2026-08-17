@@ -8,7 +8,13 @@ export interface CurrentUser {
   displayName: string | null
   avatarUrl: string | null
   provider: string
-  role: "USER" | "ADMIN"
+  /**
+   * ⚠️ Replaced `role: "USER" | "ADMIN"`, and it is not a rename. Every control used to be rendered
+   * from that one boolean, which stops meaning anything the moment somebody holds a permission
+   * personally without holding a role — which is exactly how `user:delete` is held, since it sits in
+   * no role at all. Render a control from the permission that backs it, via `useAuth().can(...)`.
+   */
+  permissions: string[]
 }
 
 export interface UpdateProfileRequest {

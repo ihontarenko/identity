@@ -2,7 +2,8 @@ import { Route, Routes } from "react-router-dom"
 import { ApplicationLayout } from "@/components/layout/ApplicationLayout"
 import { PublicLayout } from "@/components/layout/PublicLayout"
 import { RequireAuthentication } from "@/components/auth/RequireAuthentication"
-import { RequireAdministrator } from "@/components/auth/RequireAdministrator"
+import { RequirePermission } from "@/components/auth/RequirePermission"
+import { PERMISSIONS } from "@/permissions"
 import { LandingPage } from "@/pages/LandingPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { AccountPage } from "@/pages/AccountPage"
@@ -28,9 +29,9 @@ export function ApplicationRoutes() {
         <Route
           path="/admin/users"
           element={
-            <RequireAdministrator>
+            <RequirePermission permission={PERMISSIONS.READ_USER}>
               <AdminUsersPage />
-            </RequireAdministrator>
+            </RequirePermission>
           }
         />
         <Route

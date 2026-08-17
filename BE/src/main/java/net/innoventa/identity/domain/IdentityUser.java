@@ -41,10 +41,16 @@ public class IdentityUser {
     @Builder.Default
     private boolean enabled = true;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
-    @Builder.Default
-    private Role role = Role.USER;
+    // ⚠️ THE `role` COLUMN IS STILL IN THE DATABASE AND IS NO LONGER MAPPED. What somebody may do is
+    // a row in `access_*` now, resolved by the access engine — see `security/access/Permissions`.
+    // The column is left in place on purpose: `AdminRoleHandover` reads it once, after the policy has
+    // been seeded, to turn every old ADMIN into real grants. Dropping it in the same change was
+    // impossible, and the reason is worth knowing — a Flyway migration runs BEFORE the seed, so at
+    // migration time the roles it would have to grant do not exist yet. Expand now, contract in a
+    // later release once every installation has run the handover.
+    //
+    // Hibernate validates only what it is given, so an unmapped extra column is invisible to
+    // `ddl-auto: validate`. It carries a NOT NULL DEFAULT 'USER', so inserts are unaffected.
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

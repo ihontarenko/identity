@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.innoventa.identity.domain.IdentityUser;
+import net.innoventa.identity.security.IdentityUserDetailsService;
 import net.innoventa.identity.service.OAuth2AccountService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -85,8 +86,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private Authentication swapToSessionAuthentication(HttpServletRequest request, IdentityUser identityUser) {
+        // The same meaningless authority a form login gets. What this person may do is resolved by
+        // the access engine from `access_*` rows, never from an authority — see
+        // IdentityUserDetailsService.SIGNED_IN.
         List<GrantedAuthority> authorities =
-            List.of(new SimpleGrantedAuthority("ROLE_" + identityUser.getRole().name()));
+            List.of(new SimpleGrantedAuthority(IdentityUserDetailsService.SIGNED_IN));
         Authentication sessionAuthentication =
             new UsernamePasswordAuthenticationToken(identityUser.getId(), null, authorities);
 

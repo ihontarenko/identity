@@ -24,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,7 +87,23 @@ import java.util.stream.Collectors;
  */
 @Component
 @RequiredArgsConstructor
+@Order(PolicySeeder.SEEDS_BEFORE_ANYTHING_USES_A_ROLE)
 public class PolicySeeder implements ApplicationRunner {
+
+    /**
+     * ⚠️ <strong>Explicit, because leaving it to the default is what broke.</strong>
+     *
+     * <p>{@link AdminRoleHandover} must run after this one — it assigns roles this class mints. It
+     * asked for {@code Integer.MAX_VALUE} to be "last", which is <em>exactly</em> the value an
+     * un-annotated runner already has ({@link Ordered#LOWEST_PRECEDENCE}). Two equal orders are a tie,
+     * ties fall back to bean discovery order, and {@code AdminRoleHandover} sorts before
+     * {@code PolicySeeder} alphabetically — so the handover ran first and the boot died with
+     * <em>"There is no role called 'GLOBAL_ACCESS_ADMINISTRATOR'"</em>.
+     *
+     * <p>Both ends are stated now, and the other end is written as this constant plus one, so the
+     * relationship survives somebody changing this number.
+     */
+    static final int SEEDS_BEFORE_ANYTHING_USES_A_ROLE = Ordered.LOWEST_PRECEDENCE - 100;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PolicySeeder.class);
 

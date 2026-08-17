@@ -26,7 +26,7 @@ function isNavigationItemActive(pathname: string, itemPath: string) {
 // nav destinations adapted to this app.
 export function ApplicationSidebar() {
   const { pathname } = useLocation()
-  const { isAdmin } = useAuth()
+  const { can } = useAuth()
 
   return (
     <Sidebar>
@@ -53,7 +53,9 @@ export function ApplicationSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {navigationGroups.map((group) => {
-          const items = group.items.filter((item) => !item.requiresAdmin || isAdmin)
+          const items = group.items.filter(
+            (item) => !item.requiresPermission || can(item.requiresPermission),
+          )
 
           if (items.length === 0) {
             return null

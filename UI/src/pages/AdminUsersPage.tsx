@@ -19,6 +19,7 @@ import {
 import { PageHeader } from "@/components/PageHeader"
 import { useAdminUsers, useDeleteUser, useSetUserEnabled, type AdminUser } from "@/api/adminUsers"
 import { useAuth } from "@/context/AuthContext"
+import { PERMISSIONS } from "@/permissions"
 
 function extractErrorMessage(error: unknown, fallback: string) {
   if (isAxiosError(error) && typeof error.response?.data?.detail === "string") {
@@ -58,7 +59,10 @@ export function AdminUsersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Display name</TableHead>
               <TableHead>Provider</TableHead>
-              <TableHead>Role</TableHead>
+              {/* ⚠️ The Role column is gone with the role itself. What somebody holds is roles plus
+                  personal grants together, which is the access screen's whole subject — and putting
+                  half of it in a badge here would need this endpoint to disclose everybody's grants
+                  to anybody who may merely read the register. */}
               <TableHead>Enabled</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -66,7 +70,7 @@ export function AdminUsersPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
@@ -86,10 +90,16 @@ export function AdminUsersPage() {
 // page-level useSetUserEnabled() shared across every row meant its isPending was one flag for the
 // whole table, with no way to tell which row's request was actually in flight.
 function AdminUserRow({ targetUser }: { targetUser: AdminUser }) {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, can } = useAuth()
   const setEnabledMutation = useSetUserEnabled()
   const deleteUserMutation = useDeleteUser()
   const isSelf = targetUser.id === currentUser?.id
+
+  // ⚠️ Two permissions, not one. Reading this register no longer implies acting on it — somebody may
+  // hold `user:read` and neither of these, and `user:delete` is carried by no role at all, so it is
+  // normal rather than exceptional for the delete control to be absent.
+  const canDisable = can(PERMISSIONS.DISABLE_USER)
+  const canDelete = can(PERMISSIONS.DELETE_USER)
 
   function handleToggleEnabled(enabled: boolean) {
     setEnabledMutation.mutate(
@@ -113,16 +123,15 @@ function AdminUserRow({ targetUser }: { targetUser: AdminUser }) {
         <Badge variant="secondary">{targetUser.provider}</Badge>
       </TableCell>
       <TableCell>
-        <Badge variant={targetUser.role === "ADMIN" ? "default" : "outline"}>{targetUser.role}</Badge>
-      </TableCell>
-      <TableCell>
         <Switch
           checked={targetUser.enabled}
-          disabled={isSelf || setEnabledMutation.isPending}
+          disabled={isSelf || !canDisable || setEnabledMutation.isPending}
           onCheckedChange={handleToggleEnabled}
         />
       </TableCell>
       <TableCell className="text-right">
+        {!canDelete && <span className="text-[11.5px] text-muted-foreground">—</span>}
+        {canDelete && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -147,6 +156,7 @@ function AdminUserRow({ targetUser }: { targetUser: AdminUser }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        )}
       </TableCell>
     </TableRow>
   )

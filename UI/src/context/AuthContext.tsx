@@ -2,12 +2,20 @@ import { createContext, useContext, type ReactNode } from "react"
 import { isAxiosError } from "axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { CURRENT_USER_QUERY_KEY, fetchCurrentUser, type CurrentUser } from "@/api/account"
+import type { Permission } from "@/permissions"
 
 interface AuthContextValue {
   user: CurrentUser | undefined
   isLoading: boolean
   isAuthenticated: boolean
-  isAdmin: boolean
+  /**
+   * ⚠️ Replaced `isAdmin`. A screen that branches on being an administrator is a screen with one
+   * switch behind six different powers — and it breaks outright for somebody granted a permission
+   * personally without a role, which is how `user:delete` is meant to be held.
+   *
+   * Pass a constant from `@/permissions`, never a literal.
+   */
+  can: (permission: Permission) => boolean
   refresh: () => Promise<unknown>
 }
 
@@ -40,7 +48,9 @@ export function AuthProvider({ children }: AuthProviderProperties) {
     user: user ?? undefined,
     isLoading,
     isAuthenticated: Boolean(user),
-    isAdmin: user?.role === "ADMIN",
+    // Nobody signed in holds nothing, rather than holding everything — the safe direction for a
+    // check that runs before /me has answered.
+    can: (permission) => Boolean(user?.permissions.includes(permission)),
     refresh: () => queryClient.invalidateQueries({ queryKey: CURRENT_USER_QUERY_KEY }),
   }
 

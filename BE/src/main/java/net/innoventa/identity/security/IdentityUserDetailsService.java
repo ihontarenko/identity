@@ -25,6 +25,15 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class IdentityUserDetailsService implements UserDetailsService {
 
+    /**
+     * The single, meaningless authority every authenticated row carries.
+     *
+     * <p>Public because {@code OAuth2LoginSuccessHandler} builds the same session token for a
+     * Google/GitHub sign-in, and two spellings of "the authority that decides nothing" is how one of
+     * them ends up deciding something.
+     */
+    public static final String SIGNED_IN = "ROLE_USER";
+
     private final IdentityUserRepository identityUserRepository;
 
     @Override
@@ -35,7 +44,15 @@ public class IdentityUserDetailsService implements UserDetailsService {
 
         return User.withUsername(identityUser.getId())
             .password(identityUser.getHashedPassword())
-            .authorities("ROLE_" + identityUser.getRole().name())
+            // ⚠️ ONE AUTHORITY FOR EVERYBODY, AND IT DECIDES NOTHING. It used to be
+            // "ROLE_" + role.name(), which is what the `/api/admin/**` matcher read; both are gone.
+            // What a person may do is resolved by the access engine from `access_*` rows, so an
+            // authority here would be a second answer to the same question — and the one Spring
+            // Security would quietly prefer if anybody wrote a hasRole(...) again.
+            //
+            // It is not empty, because a UserDetails with no authorities is a shape several Spring
+            // Security components treat as suspicious; it is deliberately meaningless instead.
+            .authorities(SIGNED_IN)
             .build();
     }
 

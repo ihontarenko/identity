@@ -1,5 +1,7 @@
 package net.innoventa.identity.web.rest;
 
+import net.innoventa.identity.security.access.AccessReason;
+import net.innoventa.identity.security.access.AccessRefusedException;
 import net.innoventa.identity.service.InvalidCurrentPasswordException;
 import net.innoventa.identity.service.SelfModificationException;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,33 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice(basePackageClasses = RestExceptionHandler.class)
 class RestExceptionHandler {
+
+    /**
+     * A refusal from the access engine, in the words the axis that refused chose.
+     *
+     * <p>⚠️ <strong>The status hangs off the reason, not off this method.</strong> Being unauthenticated
+     * is a 401 and holding no permission is a 403 — two different next moves for the reader, and the
+     * engine is what knows which happened. A single {@code @ResponseStatus(FORBIDDEN)} here would tell
+     * somebody who is simply signed out to go and ask an administrator.
+     *
+     * <p>{@code reason} and {@code axis} travel beside the prose so an interface can tell them apart
+     * without parsing a sentence somebody may reword.
+     *
+     * <p>⚠️ The sentence names the permission that was missing and <strong>never who holds it</strong> —
+     * pointing at a person would disclose the register to a caller without {@code user:read}.
+     */
+    @ExceptionHandler(AccessRefusedException.class)
+    ProblemDetail handleAccessRefused(AccessRefusedException exception) {
+        AccessReason  reason  = exception.getReason();
+        ProblemDetail problem = ProblemDetail.forStatus(reason.status());
+
+        problem.setTitle(reason.title());
+        problem.setDetail(exception.getMessage());
+        problem.setProperty("reason", reason.wireName());
+        problem.setProperty("axis", exception.getAxis().name().toLowerCase());
+
+        return problem;
+    }
 
     @ExceptionHandler(UsernameNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)

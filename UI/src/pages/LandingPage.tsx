@@ -8,9 +8,10 @@ import { MonetaMark } from "@/components/icons/MonetaMark"
 import { TesseraMark } from "@/components/icons/TesseraMark"
 import { useAuth } from "@/context/AuthContext"
 import { useApplicationLinks } from "@/api/applicationLinks"
+import { PERMISSIONS } from "@/permissions"
 
 export function LandingPage() {
-  const { user, isAdmin } = useAuth()
+  const { user, can } = useAuth()
   const { data: applicationLinks } = useApplicationLinks()
 
   return (
@@ -36,7 +37,7 @@ export function LandingPage() {
               </Link>
             </Button>
           )}
-          {isAdmin && (
+          {can(PERMISSIONS.READ_USER) && (
             <Button variant="outline" asChild>
               <Link to="/admin/users">
                 <ShieldCheck className="size-4" />
