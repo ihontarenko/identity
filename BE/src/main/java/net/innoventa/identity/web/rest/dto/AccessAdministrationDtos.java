@@ -94,20 +94,20 @@ public final class AccessAdministrationDtos {
      *                than hiding it. Somebody has to be able to clear it
      */
     public record RoleHoldingView(
-        AccountRef    account,
-        String        roleName,
-        String        scopeType,
-        String        source,
-        LocalDateTime since) {}
+        AccountReference account,
+        String           roleName,
+        String           scopeType,
+        String           source,
+        LocalDateTime    since) {}
 
     /** One person's personal allow or deny. */
     public record DirectHoldingView(
-        AccountRef    account,
-        String        permission,
-        boolean       allowed,
-        String        scopeType,
-        String        reason,
-        LocalDateTime since) {}
+        AccountReference account,
+        String           permission,
+        boolean          allowed,
+        String           scopeType,
+        String           reason,
+        LocalDateTime    since) {}
 
     /**
      * A person named rather than identified.
@@ -115,10 +115,10 @@ public final class AccessAdministrationDtos {
      * <p>A grant carries a row id, which is right for the engine and useless on a screen — nobody
      * recognises somebody by their primary key.
      */
-    public record AccountRef(String id, String email, String displayName) {
+    public record AccountReference(String id, String email, String displayName) {
 
-        public static AccountRef from(IdentityUser identityUser) {
-            return new AccountRef(
+        public static AccountReference from(IdentityUser identityUser) {
+            return new AccountReference(
                 identityUser.getId(), identityUser.getEmail(), identityUser.getDisplayName());
         }
     }
@@ -127,7 +127,7 @@ public final class AccessAdministrationDtos {
     public record AccessOverview(
         List<PermissionView>    permissions,
         List<RoleView>          roles,
-        List<RoleHoldingView>   roleHoldings,
-        List<DirectHoldingView> directHoldings,
-        List<AccountRef>        accounts) {}
+        List<RoleHoldingView>    roleHoldings,
+        List<DirectHoldingView>  directHoldings,
+        List<AccountReference>   accounts) {}
 }

@@ -7,7 +7,7 @@ import net.innoventa.identity.security.access.CallerPermissions;
 import net.innoventa.identity.security.access.IdentityScope;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AccessOverview;
-import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AccountRef;
+import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AccountReference;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.BundleEntryView;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.DirectHoldingView;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.PermissionView;
@@ -90,8 +90,8 @@ public class AccessAdministrationService {
      * permission of its own exists to govern.
      */
     public AccessOverview overview() {
-        Map<String, AccountRef> whoIsWho = accounts.findAll().stream()
-            .collect(Collectors.toMap(IdentityUser::getId, AccountRef::from));
+        Map<String, AccountReference> whoIsWho = accounts.findAll().stream()
+            .collect(Collectors.toMap(IdentityUser::getId, AccountReference::from));
 
         return new AccessOverview(
             permissions(),
@@ -99,7 +99,7 @@ public class AccessAdministrationService {
             roleHoldings(whoIsWho),
             directHoldings(whoIsWho),
             whoIsWho.values().stream()
-                .sorted(Comparator.comparing(AccountRef::email, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparing(AccountReference::email, String.CASE_INSENSITIVE_ORDER))
                 .toList());
     }
 
@@ -232,7 +232,7 @@ public class AccessAdministrationService {
             .toList();
     }
 
-    private List<RoleHoldingView> roleHoldings(Map<String, AccountRef> whoIsWho) {
+    private List<RoleHoldingView> roleHoldings(Map<String, AccountReference> whoIsWho) {
         return disclosure.roleHoldings().stream()
             .map(holding -> new RoleHoldingView(
                 whoIsWho.get(holding.subjectId()),
@@ -244,7 +244,7 @@ public class AccessAdministrationService {
             .toList();
     }
 
-    private List<DirectHoldingView> directHoldings(Map<String, AccountRef> whoIsWho) {
+    private List<DirectHoldingView> directHoldings(Map<String, AccountReference> whoIsWho) {
         return disclosure.directHoldings().stream()
             .map(holding -> new DirectHoldingView(
                 whoIsWho.get(holding.subjectId()),

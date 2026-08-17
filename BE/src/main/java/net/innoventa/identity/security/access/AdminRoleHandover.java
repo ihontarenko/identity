@@ -45,8 +45,11 @@ import java.util.List;
  * column is still there and does nothing when it is not — so the day the contract migration lands, this
  * becomes a no-op rather than a startup failure, and the deletion is tidying rather than a fix.
  *
- * <p>It is idempotent for the same reason the seed is: {@code assign} reports whether it changed
- * anything, and on the second start it changes nothing.
+ * <p>⚠️ <strong>It runs once per account, not once per start, and the difference is not academic.</strong>
+ * {@code assign} reporting "no change" is not the same as not running: a grant somebody had revoked on
+ * the access screen would be re-created on the next boot, which is the seed re-asserting itself over an
+ * edit — the exact thing {@code AccessStorageConfiguration} refuses the policy document for. So
+ * {@link #handOver} clears the {@code role} value it consumed, and the next start finds nothing to do.
  */
 @Component
 @RequiredArgsConstructor
@@ -123,6 +126,23 @@ public class AdminRoleHandover implements ApplicationRunner {
             formerAdministrators.size(), granted);
     }
 
+    /**
+     * ⚠️ <strong>Consumes the column value it read, and that is what makes this run once.</strong>
+     *
+     * <p>Without the final update this method was idempotent in the wrong sense: {@code assign}
+     * reports "no change" when the row is already there, so a re-run <em>looked</em> harmless — but a
+     * grant somebody had <strong>revoked on the access screen</strong> was simply re-created on the
+     * next start. Confirmed by doing exactly that: revoke, restart, and the log cheerfully says
+     * "1 grant(s)".
+     *
+     * <p>That is the precise failure {@code AccessStorageConfiguration} exists to prevent — the seed
+     * re-asserting itself over an edit — arriving through a back door nobody was watching. A migration
+     * could not have done it, because a migration runs once by construction; this substitute had to
+     * earn the same property.
+     *
+     * <p>So the account stops being an {@code ADMIN} the moment its grants exist. The next start finds
+     * no rows to hand over and does nothing, for good.
+     */
     private int handOver(String subjectId) {
         int granted = 0;
 
@@ -134,6 +154,8 @@ public class AdminRoleHandover implements ApplicationRunner {
                 granted++;
             }
         }
+
+        database.update("UPDATE identity_users SET role = 'USER' WHERE id = ?", subjectId);
 
         return granted;
     }

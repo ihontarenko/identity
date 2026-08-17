@@ -20,8 +20,14 @@ import java.util.UUID;
 /**
  * Backs the admin user-management panel. Kept separate from {@link AccountService} — that one is
  * self-service for whichever user owns the session, this one acts on an arbitrary target user on
- * an admin's behalf ({@code SecurityConfiguration} gates every {@code /api/admin/**} call to
- * {@code ROLE_ADMIN} before it reaches here).
+ * an administrator's behalf.
+ *
+ * <p>⚠️ <strong>Nothing gates this class as a whole any more, and that is the change ID-4 made.</strong>
+ * It used to be true that {@code SecurityConfiguration} refused every {@code /api/admin/**} call
+ * without {@code ROLE_ADMIN} before it reached here, so one boolean covered every method below. That
+ * matcher is gone: each route now declares the permission it actually needs, and they are four
+ * different ones. A caller reaching {@link #deleteUser} has been asked a different question than one
+ * reaching {@link #listUsers}.
  *
  * <p>Delete is a hard delete — no other table in this database references {@code identity_users}
  * yet (Moneta's {@code workspaces.owner_subject} is a separate database, referenced only by

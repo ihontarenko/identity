@@ -24,7 +24,7 @@ export interface RoleView {
   bundle: BundleEntryView[]
 }
 
-export interface AccountRef {
+export interface AccountReference {
   id: string
   email: string
   displayName: string | null
@@ -32,7 +32,7 @@ export interface AccountRef {
 
 export interface RoleHoldingView {
   /** ⚠️ null where the grant outlived the account — a library table cannot foreign-key into ours. */
-  account: AccountRef | null
+  account: AccountReference | null
   roleName: string
   scopeType: string
   source: string
@@ -40,7 +40,7 @@ export interface RoleHoldingView {
 }
 
 export interface DirectHoldingView {
-  account: AccountRef | null
+  account: AccountReference | null
   permission: string
   allowed: boolean
   scopeType: string
@@ -53,7 +53,7 @@ export interface AccessOverview {
   roles: RoleView[]
   roleHoldings: RoleHoldingView[]
   directHoldings: DirectHoldingView[]
-  accounts: AccountRef[]
+  accounts: AccountReference[]
 }
 
 const ACCESS_QUERY_KEY = ["admin", "access"]
@@ -132,7 +132,7 @@ export function useUngrantPermission() {
 }
 
 /** How a person is named on this screen — the email, since a display name is optional. */
-export function nameOf(account: AccountRef | null): string {
+export function nameOf(account: AccountReference | null): string {
   if (!account) {
     return "(account no longer exists)"
   }
