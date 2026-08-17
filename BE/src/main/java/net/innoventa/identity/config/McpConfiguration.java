@@ -4,30 +4,41 @@ import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
 import net.innoventa.identity.mcp.McpEndpoint;
+import net.innoventa.identity.security.access.Permissions;
 import org.jmouse.ai.ToolCatalog;
+import org.jmouse.ai.ToolDefinition;
 import org.jmouse.ai.ToolDispatcher;
+import org.jmouse.ai.guard.GuardChain;
 import org.jmouse.ai.mcp.McpToolServer;
+import org.jmouse.ai.spi.CallerResolver;
+import org.jmouse.ai.spi.InvocationTrace;
+import org.jmouse.ai.spi.PermissionVocabulary;
+import org.jmouse.ai.spi.ScopeResolver;
+import org.jmouse.ai.spi.ToolAuthorizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * The Model Context Protocol, served — and, for now, serving nothing.
  *
- * <h2>⚠️ An empty catalogue on purpose</h2>
+ * <h2>⚠️ Everything here is wiring, and deliberately so</h2>
  *
- * <p>This ticket is the transport and the credential; the tools are ID-10. A server with no tools is a
- * perfectly good MCP server — it handshakes, answers {@code tools/list} with an empty list, and lets a
- * client be added and its credential proven before anything can be called with it. Building the two
- * together would have meant discovering an authorization bug through a tool failure.
+ * <p>The catalogue is the tool definitions', the decisions are the dispatcher's, and the protocol is
+ * the SDK's; this file only says which bean holds which piece. A tool reachable from a client asks
+ * {@link net.innoventa.identity.mcp.tool.IdentityToolAuthorizer} for the same permission the equivalent
+ * screen control asks the same engine for, against the same person — so <strong>there is no second
+ * path into an action and no second place a permission is checked</strong>, and that is a fact the
+ * types hold rather than a promise this class keeps.
  *
- * <p>⚠️ <strong>{@code ToolDispatcher.over} takes every seam at its default, and one of those defaults
- * is not permissive</strong> — the scope resolver refuses. That is the correct posture for a catalogue
- * that is empty and the wrong one the moment a tool exists, so ID-10 replaces this dispatcher rather
- * than adding to it.
+ * <p>⚠️ <strong>The dispatcher is built with real seams rather than {@code ToolDispatcher.over}.</strong>
+ * That convenience takes every seam at its default and one of those defaults is <em>not</em> permissive
+ * — it refuses — which was right while the catalogue was empty (ID-9) and would silently refuse
+ * everything now.
  *
  * <h2>⚠️ A servlet, not a Spring MCP module</h2>
  *
@@ -54,10 +65,42 @@ public class McpConfiguration {
      * <p>The instructions are read by the model before it calls anything, so they carry the one rule
      * that is otherwise learned by being refused.
      */
+    /**
+     * The catalogue, vetted.
+     *
+     * <p>⚠️ {@link PermissionVocabulary} is what makes a tool declaring a permission nothing grants a
+     * <em>boot</em> failure rather than a call that refuses forever. The vocabulary is
+     * {@link Permissions#all()} — the same list the policy document is checked against in both
+     * directions — so a permission can be misspelt in exactly one place and it is caught in all three.
+     */
     @Bean
-    public McpToolServer mcpToolServer(@Value("${identity.version:0.1.0}") String version) {
+    public ToolCatalog mcpToolCatalog(List<ToolDefinition> definitions) {
+        return ToolCatalog.of(definitions, PermissionVocabulary.of(Set.copyOf(Permissions.all())));
+    }
+
+    /**
+     * ⚠️ <strong>Every seam named, and {@code ScopeResolver.refusing()} kept on purpose.</strong>
+     *
+     * <p>Identity has no route and no tool that names a place: both floors are {@code GLOBAL} and
+     * {@code SELF}, and no action is {@code scopeConfined()}. So nothing ever asks the scope resolver,
+     * and the honest value is the one that would refuse if something did — a permissive resolver would
+     * be a hole waiting for the first tool that forgets.
+     */
+    @Bean
+    public ToolDispatcher mcpToolDispatcher(
+        ToolCatalog catalog, CallerResolver callerResolver, ToolAuthorizer authorizer) {
+
+        return new ToolDispatcher(
+            catalog, callerResolver, authorizer,
+            ScopeResolver.refusing(), GuardChain.defaults(), InvocationTrace.none());
+    }
+
+    @Bean
+    public McpToolServer mcpToolServer(
+        ToolDispatcher dispatcher, @Value("${identity.version:0.1.0}") String version) {
+
         return new McpToolServer(
-            ToolDispatcher.over(ToolCatalog.of(List.of())), "identity", version,
+            dispatcher, "identity", version,
             "Identity is the sign-in service the other applications trust. It holds accounts and what "
             + "each account may do INSIDE Identity itself — raising an account, blocking one, handing "
             + "out a role — and nothing about what anybody may do in any other product, which each of "
