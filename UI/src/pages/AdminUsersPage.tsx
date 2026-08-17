@@ -27,6 +27,7 @@ import {
   useSetUserEnabled,
   type AdminUser,
 } from "@/api/adminUsers"
+import { useAccessOverview } from "@/api/access"
 import { useAuth } from "@/context/AuthContext"
 import { PERMISSIONS } from "@/permissions"
 
@@ -40,6 +41,12 @@ function extractErrorMessage(error: unknown, fallback: string) {
 export function AdminUsersPage() {
   const { data: users, isLoading, isError, error, refetch } = useAdminUsers()
   const { can } = useAuth()
+
+  // ⚠️ Driven by what actually arrived, not by the caller's permission. The server sends holdings
+  // only to somebody entitled to see them, so an absent column means "not yours to see" and an
+  // empty one would mean "nobody holds anything" — two different statements, and rendering the
+  // second when the first is true is the disclosure question answered backwards.
+  const showsRoles = (users ?? []).some((account) => account.roles.length > 0)
 
   return (
     <>
@@ -71,10 +78,10 @@ export function AdminUsersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Display name</TableHead>
               <TableHead>Provider</TableHead>
-              {/* ⚠️ The Role column is gone with the role itself. What somebody holds is roles plus
-                  personal grants together, which is the access screen's whole subject — and putting
-                  half of it in a badge here would need this endpoint to disclose everybody's grants
-                  to anybody who may merely read the register. */}
+              {/* ⚠️ Roles only, and only for a caller entitled to see them. Everything finer —
+                  personal allows and denies, what each role carries — stays on the access screen;
+                  answering all of it here would be a second, worse copy of it. */}
+              {showsRoles && <TableHead>Roles</TableHead>}
               <TableHead>Enabled</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -82,13 +89,13 @@ export function AdminUsersPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={showsRoles ? 6 : 5} className="text-center text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
             )}
             {users?.map((targetUser) => (
-              <AdminUserRow key={targetUser.id} targetUser={targetUser} />
+              <AdminUserRow key={targetUser.id} targetUser={targetUser} showsRoles={showsRoles} />
             ))}
           </TableBody>
         </Table>
@@ -106,24 +113,36 @@ export function AdminUsersPage() {
  * that should be noticed while it is being done rather than discovered months later.
  */
 function CreateUserForm({ existing }: { existing: AdminUser[] }) {
+  const { can } = useAuth()
   const [email, setEmail] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [initialPassword, setInitialPassword] = useState("")
+  const [roles, setRoles] = useState<string[]>([])
   const createUserMutation = useCreateUser()
+
+  // ⚠️ The same catalogue the access screen reads, not a second list. A role picker built from
+  // constants here would be one release behind the day somebody adds a role.
+  const mayHandOutRoles = can(PERMISSIONS.ADMINISTER_ACCESS)
+  const { data: access } = useAccessOverview({ enabled: mayHandOutRoles })
 
   const clash = existing.find(
     (account) => account.email.toLowerCase() === email.trim().toLowerCase(),
   )
 
+  function toggleRole(role: string, on: boolean) {
+    setRoles((current) => (on ? [...current, role] : current.filter((held) => held !== role)))
+  }
+
   function submit() {
     createUserMutation.mutate(
-      { email: email.trim(), displayName: displayName.trim(), initialPassword },
+      { email: email.trim(), displayName: displayName.trim(), initialPassword, roles },
       {
         onSuccess: (created) => {
           toast.success(`${created.email} raised — they must change the password at first sign-in.`)
           setEmail("")
           setDisplayName("")
           setInitialPassword("")
+          setRoles([])
         },
         onError: (error) => toast.error(extractErrorMessage(error, "Could not raise the account.")),
       },
@@ -170,6 +189,25 @@ function CreateUserForm({ existing }: { existing: AdminUser[] }) {
         </Button>
       </div>
 
+      {mayHandOutRoles && (access?.roles.length ?? 0) > 0 && (
+        <div className="flex flex-wrap items-center gap-4 border-t pt-3">
+          <span className="text-[11.5px] text-muted-foreground">Holds from the start</span>
+          {access?.roles.map((role) => (
+            <label key={role.name} className="flex items-center gap-2">
+              <Switch
+                checked={roles.includes(role.name)}
+                onCheckedChange={(on) => toggleRole(role.name, on)}
+              />
+              <span className="font-mono text-[12.5px]">{role.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {/* ⚠️ Roles only — no personal allow or deny here. Keeping `user:delete` out of the create form
+          is what stops it becoming the shortest path to the most dangerous permission in the
+          installation; it is granted by name on the access screen, deliberately. */}
+
       <p className="text-[11.5px] text-muted-foreground">
         The account is local — a Google or GitHub identity is created by that provider's first sign-in
         and cannot be typed in here. Whoever signs in with this password must replace it before they
@@ -190,7 +228,13 @@ function CreateUserForm({ existing }: { existing: AdminUser[] }) {
 // user) doesn't disable every other row in the table for the duration of that request — a single
 // page-level useSetUserEnabled() shared across every row meant its isPending was one flag for the
 // whole table, with no way to tell which row's request was actually in flight.
-function AdminUserRow({ targetUser }: { targetUser: AdminUser }) {
+function AdminUserRow({
+  targetUser,
+  showsRoles,
+}: {
+  targetUser: AdminUser
+  showsRoles: boolean
+}) {
   const { user: currentUser, can } = useAuth()
   const setEnabledMutation = useSetUserEnabled()
   const deleteUserMutation = useDeleteUser()
@@ -230,6 +274,18 @@ function AdminUserRow({ targetUser }: { targetUser: AdminUser }) {
       <TableCell>
         <Badge variant="secondary">{targetUser.provider}</Badge>
       </TableCell>
+      {showsRoles && (
+        <TableCell>
+          {targetUser.roles.length === 0 && <span className="text-muted-foreground">—</span>}
+          <span className="flex flex-wrap gap-1">
+            {targetUser.roles.map((role) => (
+              <Badge key={role} variant="outline" className="font-mono">
+                {role}
+              </Badge>
+            ))}
+          </span>
+        </TableCell>
+      )}
       <TableCell>
         <Switch
           checked={targetUser.enabled}

@@ -63,8 +63,14 @@ async function fetchAccessOverview(): Promise<AccessOverview> {
   return response.data
 }
 
-export function useAccessOverview() {
-  return useQuery({ queryKey: ACCESS_QUERY_KEY, queryFn: fetchAccessOverview })
+/**
+ * @param enabled ⚠️ pass `false` where the caller does not hold `access:administer`. The endpoint
+ *                refuses them, and firing it anyway would put a 403 in the console of every
+ *                administrator who can raise accounts but not hand out roles — a screen that looks
+ *                broken while behaving exactly as designed.
+ */
+export function useAccessOverview({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({ queryKey: ACCESS_QUERY_KEY, queryFn: fetchAccessOverview, enabled })
 }
 
 /**

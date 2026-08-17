@@ -9,6 +9,13 @@ export interface AdminUser {
   enabled: boolean
   /** Still holding the password an administrator set — has not been replaced yet. */
   mustChangePassword: boolean
+  /**
+   * ⚠️ Empty unless the caller holds `access:administer`, and never merely because the account holds
+   * nothing. Reading the register is one power; seeing who holds what is another. Render the column
+   * only when some row has something, so an unentitled reader is not shown an empty column and left
+   * to conclude nobody holds anything.
+   */
+  roles: string[]
   createdAt: string
 }
 
@@ -16,6 +23,8 @@ export interface CreateUserRequest {
   email: string
   displayName: string
   initialPassword: string
+  /** ⚠️ Naming any of these needs `access:administer` too — the server refuses the whole request. */
+  roles: string[]
 }
 
 const ADMIN_USERS_QUERY_KEY = ["admin", "users"]

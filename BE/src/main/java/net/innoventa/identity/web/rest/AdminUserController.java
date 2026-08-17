@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.security.access.Scopes;
+import net.innoventa.identity.service.AccessAdministrationService;
 import net.innoventa.identity.service.AdminUserService;
 import net.innoventa.identity.web.rest.dto.AdminUserResponse;
 import net.innoventa.identity.web.rest.dto.CreateUserRequest;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * ⚠️ <strong>Every method here is now its own enforcement point, and that is the change.</strong>
@@ -53,12 +55,25 @@ import java.util.List;
 @RequiresAccess(scope = Scopes.GLOBAL)
 public class AdminUserController {
 
-    private final AdminUserService adminUserService;
+    private final AdminUserService            adminUserService;
+    private final AccessAdministrationService accessAdministrationService;
 
+    /**
+     * The register.
+     *
+     * <p>⚠️ Each row carries the roles its holder has <strong>only for a caller who also holds
+     * {@code access:administer}</strong> — see {@code AccessAdministrationService.rolesHeldByAccount}
+     * for why that is earned rather than assumed.
+     */
     @GetMapping
     @RequiresAccess(permission = Permissions.READ_USER, scope = Scopes.GLOBAL)
     public List<AdminUserResponse> listUsers() {
-        return adminUserService.listUsers().stream().map(AdminUserResponse::from).toList();
+        Map<String, List<String>> heldRoles = accessAdministrationService.rolesHeldByAccount();
+
+        return adminUserService.listUsers().stream()
+            .map(account -> AdminUserResponse.from(
+                account, heldRoles.getOrDefault(account.getId(), List.of())))
+            .toList();
     }
 
     /**
@@ -70,11 +85,17 @@ public class AdminUserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @RequiresAccess(permission = Permissions.CREATE_USER, scope = Scopes.GLOBAL)
-    public AdminUserResponse createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
-        return AdminUserResponse.from(adminUserService.createUser(
-            createUserRequest.email(),
-            createUserRequest.displayName(),
-            createUserRequest.initialPassword()));
+    public AdminUserResponse createUser(
+        Authentication authentication, @Valid @RequestBody CreateUserRequest createUserRequest) {
+
+        return AdminUserResponse.from(
+            adminUserService.createUser(
+                createUserRequest.email(),
+                createUserRequest.displayName(),
+                createUserRequest.initialPassword(),
+                createUserRequest.roles(),
+                authentication.getName()),
+            createUserRequest.roles());
     }
 
     /**

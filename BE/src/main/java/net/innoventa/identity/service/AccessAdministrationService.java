@@ -3,6 +3,7 @@ package net.innoventa.identity.service;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.domain.IdentityUser;
 import net.innoventa.identity.repository.IdentityUserRepository;
+import net.innoventa.identity.security.access.CallerPermissions;
 import net.innoventa.identity.security.access.IdentityScope;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AccessOverview;
@@ -74,6 +75,7 @@ public class AccessAdministrationService {
     private final ScopeCatalog             scopes;
     private final PolicyDocument           document;
     private final IdentityUserRepository   accounts;
+    private final CallerPermissions        callerPermissions;
 
     /** Installation-wide — the one place anything here is written. */
     private static final ScopeReference EVERYWHERE =
@@ -99,6 +101,37 @@ public class AccessAdministrationService {
             whoIsWho.values().stream()
                 .sorted(Comparator.comparing(AccountRef::email, String.CASE_INSENSITIVE_ORDER))
                 .toList());
+    }
+
+    /**
+     * Which roles each account holds, for a screen that is <em>about</em> accounts rather than about
+     * access — the register (ID-8).
+     *
+     * <h2>⚠️ Empty for a caller who may not see it, and that is the whole of the disclosure rule</h2>
+     *
+     * <p>The register is gated on {@link Permissions#READ_USER}. Who holds what is gated on
+     * {@link Permissions#ADMINISTER_ACCESS} — a separate power, and a disclosure surface in its own
+     * right. Returning this to anybody who may merely read the register would widen {@code user:read}
+     * to include everybody's grants, silently, through a column somebody added for convenience.
+     *
+     * <p>So it answers with what the caller is entitled to and <strong>nothing</strong> otherwise. It
+     * does not refuse: the caller asked for the register, which they may have; they simply do not get
+     * the extra column, and the interface renders it only when it is there.
+     *
+     * <p>⚠️ This is the resolution of a real contradiction between two tickets. ID-4 argued the users
+     * list must not carry holdings at all, precisely because of the widening above; ID-8 asked for the
+     * row to show what its holder holds. Both are right about their half — the answer is that the
+     * column exists and is earned rather than assumed.
+     */
+    public Map<String, List<String>> rolesHeldByAccount() {
+        if (!callerPermissions.ofCaller().contains(Permissions.ADMINISTER_ACCESS)) {
+            return Map.of();
+        }
+
+        return disclosure.roleHoldings().stream()
+            .collect(Collectors.groupingBy(
+                holding -> holding.subjectId(),
+                Collectors.mapping(holding -> holding.roleName(), Collectors.toList())));
     }
 
     /**
