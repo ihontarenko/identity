@@ -18,7 +18,10 @@ import java.time.LocalDateTime;
  */
 public record AdminUserResponse(
     String id, String email, String displayName, String provider,
-    boolean enabled, LocalDateTime createdAt
+    boolean enabled,
+    /** Whether the account has yet to replace the password an administrator set for it. */
+    boolean mustChangePassword,
+    LocalDateTime createdAt
 ) {
 
     public static AdminUserResponse from(IdentityUser identityUser) {
@@ -28,6 +31,7 @@ public record AdminUserResponse(
             identityUser.getDisplayName(),
             identityUser.getProvider().name(),
             identityUser.isEnabled(),
+            identityUser.isMustChangePassword(),
             identityUser.getCreatedAt()
         );
     }

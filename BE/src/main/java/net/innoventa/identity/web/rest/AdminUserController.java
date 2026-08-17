@@ -1,10 +1,13 @@
 package net.innoventa.identity.web.rest;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.security.access.Scopes;
 import net.innoventa.identity.service.AdminUserService;
 import net.innoventa.identity.web.rest.dto.AdminUserResponse;
+import net.innoventa.identity.web.rest.dto.CreateUserRequest;
+import net.innoventa.identity.web.rest.dto.SetPasswordRequest;
 import net.innoventa.identity.web.rest.dto.UpdateEnabledRequest;
 import org.jmouse.access.enforcement.RequiresAccess;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -55,6 +59,39 @@ public class AdminUserController {
     @RequiresAccess(permission = Permissions.READ_USER, scope = Scopes.GLOBAL)
     public List<AdminUserResponse> listUsers() {
         return adminUserService.listUsers().stream().map(AdminUserResponse::from).toList();
+    }
+
+    /**
+     * Raise an account — the feature this whole epic was opened for.
+     *
+     * <p>⚠️ {@code user:create} and nothing else. Reading the register is a separate power, so an
+     * integration that only ever adds people no longer has to be able to enumerate everybody.
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @RequiresAccess(permission = Permissions.CREATE_USER, scope = Scopes.GLOBAL)
+    public AdminUserResponse createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
+        return AdminUserResponse.from(adminUserService.createUser(
+            createUserRequest.email(),
+            createUserRequest.displayName(),
+            createUserRequest.initialPassword()));
+    }
+
+    /**
+     * Set somebody else's password.
+     *
+     * <p>⚠️ {@code user:password} rather than {@code user:edit}: whoever holds this can sign in as
+     * anybody, one reset later. The account is made to replace what is set here.
+     */
+    @PostMapping("/{id}/password")
+    @RequiresAccess(permission = Permissions.SET_PASSWORD, scope = Scopes.GLOBAL)
+    public AdminUserResponse setPassword(
+        Authentication authentication,
+        @PathVariable String id,
+        @Valid @RequestBody SetPasswordRequest setPasswordRequest
+    ) {
+        return AdminUserResponse.from(adminUserService.setPassword(
+            authentication.getName(), id, setPasswordRequest.newPassword()));
     }
 
     @PatchMapping("/{id}/enabled")

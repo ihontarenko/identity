@@ -15,6 +15,12 @@ export interface CurrentUser {
    * no role at all. Render a control from the permission that backs it, via `useAuth().can(...)`.
    */
   permissions: string[]
+  /**
+   * ⚠️ This account is holding a password an administrator chose for it. The interface renders the
+   * change-password screen and nothing else — the *enforcement* is a server-side filter, because a
+   * gate the client applies is a gate a client can decline to apply.
+   */
+  mustChangePassword: boolean
 }
 
 export interface UpdateProfileRequest {

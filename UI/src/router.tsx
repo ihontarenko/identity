@@ -10,8 +10,26 @@ import { AccountPage } from "@/pages/AccountPage"
 import { AdminUsersPage } from "@/pages/AdminUsersPage"
 import { AccessSettingsPage } from "@/pages/AccessSettingsPage"
 import { AppearanceSettingsPage } from "@/pages/AppearanceSettingsPage"
+import { ForcePasswordChangePage } from "@/pages/ForcePasswordChangePage"
+import { useAuth } from "@/context/AuthContext"
 
 export function ApplicationRoutes() {
+  const { user } = useAuth()
+
+  // ⚠️ Every route replaced, not one route added. An account holding a password its administrator
+  // chose has nowhere useful to be: the server refuses each of these calls anyway, so routing to them
+  // would show a person a sequence of failures instead of the one thing they can do. The server is
+  // what enforces it; this only stops the wandering.
+  if (user?.mustChangePassword) {
+    return (
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="*" element={<ForcePasswordChangePage />} />
+        </Route>
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
       <Route element={<PublicLayout />}>

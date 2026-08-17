@@ -44,6 +44,13 @@ public class AccountService {
         identityUserRepository.save(identityUser);
     }
 
+    /**
+     * ⚠️ <strong>This is the one path that clears {@code mustChangePassword}, and it has to stay the
+     * one.</strong> An administrator can set somebody's password (see {@code AdminUserService}), which
+     * <em>sets</em> the flag; only the person themselves changing it clears it. A second
+     * clearing path is how one of the two ends up not clearing it, and a flag that is sometimes not
+     * cleared locks somebody out of every product with no way back.
+     */
     @Transactional
     public void changePassword(String id, String currentPassword, String newPassword) {
         IdentityUser identityUser = requireById(id);
@@ -52,6 +59,7 @@ public class AccountService {
             throw new InvalidCurrentPasswordException();
         }
         identityUser.setHashedPassword(passwordEncoder.encode(newPassword));
+        identityUser.setMustChangePassword(false);
         identityUserRepository.save(identityUser);
     }
 

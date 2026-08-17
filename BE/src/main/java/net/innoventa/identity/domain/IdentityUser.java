@@ -41,6 +41,19 @@ public class IdentityUser {
     @Builder.Default
     private boolean enabled = true;
 
+    /**
+     * ⚠️ Whether this account is holding a password somebody else chose for it.
+     *
+     * <p>Set when an administrator raises the account or sets its password, cleared the moment the
+     * person changes it themselves. While it stands, the session reaches the change-password call and
+     * nothing else — {@code PasswordChangeRequiredFilter} is what enforces that, at the session rather
+     * than by hiding a screen, because a credential an administrator chose must not open the other
+     * products.
+     */
+    @Column(name = "must_change_password", nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
     // ⚠️ THE `role` COLUMN IS STILL IN THE DATABASE AND IS NO LONGER MAPPED. What somebody may do is
     // a row in `access_*` now, resolved by the access engine — see `security/access/Permissions`.
     // The column is left in place on purpose: `AdminRoleHandover` reads it once, after the policy has

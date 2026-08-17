@@ -7,7 +7,15 @@ export interface AdminUser {
   displayName: string | null
   provider: string
   enabled: boolean
+  /** Still holding the password an administrator set — has not been replaced yet. */
+  mustChangePassword: boolean
   createdAt: string
+}
+
+export interface CreateUserRequest {
+  email: string
+  displayName: string
+  initialPassword: string
 }
 
 const ADMIN_USERS_QUERY_KEY = ["admin", "users"]
@@ -42,6 +50,26 @@ export function useDeleteUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteUserById(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY }),
+  })
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (request: CreateUserRequest) => {
+      const response = await httpClient.post<AdminUser>("/admin/users", request)
+      return response.data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY }),
+  })
+}
+
+export function useSetUserPassword() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, newPassword }: { id: string; newPassword: string }) =>
+      httpClient.post(`/admin/users/${id}/password`, { newPassword }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY }),
   })
 }

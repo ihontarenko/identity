@@ -39,6 +39,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -70,6 +71,8 @@ public class SecurityConfiguration {
 
     private final IdentityProperties identityProperties;
 
+    private final PasswordChangeRequiredFilter passwordChangeRequiredFilter;
+
     @Bean
     @Order(1)
     SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -86,6 +89,20 @@ public class SecurityConfiguration {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+            // ⚠️ THIS CHAIN IS THE ONE THAT MATTERS FOR THE FLAG. An account holding a password its
+            // administrator chose must not be able to trade it for a token at /oauth2/authorize —
+            // otherwise it walks into every product that trusts this service, and the flag is
+            // decoration.
+            //
+            // ⚠️ AFTER SecurityContextHolderFilter, AND THE POSITION IS THE WHOLE THING. Written
+            // `addFilterAfter(..., BasicAuthenticationFilter.class)` — the obvious choice, and the one
+            // the default chain below uses — it never ran at all here: Spring Authorization Server
+            // registers OAuth2AuthorizationEndpointFilter around the pre-authenticated position, which
+            // is EARLIER in the standard order, so the endpoint had already issued a code and
+            // committed a 302 before this filter was reached. Confirmed by driving it: a flagged
+            // account got `Location: …?code=…` for tessera-web. Placing it immediately after the
+            // context is loaded is what makes it the first thing an authenticated request meets.
+            .addFilterAfter(passwordChangeRequiredFilter, SecurityContextHolderFilter.class)
             .exceptionHandling(exceptionHandling -> exceptionHandling.defaultAuthenticationEntryPointFor(
                 new LoginUrlAuthenticationEntryPoint("/login"),
                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
@@ -125,6 +142,9 @@ public class SecurityConfiguration {
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+            // Same position as the authorization-server chain above, and for the same reason — one
+            // answer to "where does this go", rather than two that have to be kept in step.
+            .addFilterAfter(passwordChangeRequiredFilter, SecurityContextHolderFilter.class)
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/actuator/health", "/.well-known/**").permitAll()
                 // Reachable by an unauthenticated visitor by construction (initiates/completes the

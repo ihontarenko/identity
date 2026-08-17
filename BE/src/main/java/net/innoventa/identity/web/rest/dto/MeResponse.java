@@ -19,7 +19,14 @@ import java.util.Set;
  */
 public record MeResponse(
     String id, String email, String displayName, String avatarUrl, String provider,
-    List<String> permissions
+    List<String> permissions,
+    /**
+     * ⚠️ Whether this account is holding a password an administrator chose for it. The interface uses
+     * it to render the change-password screen and nothing else — the <em>enforcement</em> is
+     * {@code PasswordChangeRequiredFilter}, at the session, because a gate the client applies is a
+     * gate a client can decline to apply.
+     */
+    boolean mustChangePassword
 ) {
 
     public static MeResponse from(IdentityUser identityUser, Set<String> permissions) {
@@ -29,7 +36,8 @@ public record MeResponse(
             identityUser.getDisplayName(),
             identityUser.getAvatarUrl(),
             identityUser.getProvider().name(),
-            List.copyOf(permissions)
+            List.copyOf(permissions),
+            identityUser.isMustChangePassword()
         );
     }
 
