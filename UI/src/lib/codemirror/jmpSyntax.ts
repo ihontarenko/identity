@@ -177,6 +177,28 @@ const STATEMENT_KINDS = new Set(['declare', 'assign']);
 const OPENS_A_BLOCK =
     /^\s+(policy|scopes|permissions|actions|capabilities|variables|plans|entitlements|role|subject)\b/;
 
+/**
+ * The attributes a `scopes` line may carry — `@SPACE place parameter=spaceId inside=@ORGANIZATION`.
+ *
+ * <p>Each asks a different question of the scope graph, which is why they are worth telling apart at
+ * a glance: `inside=` makes a place a child of another so that a grant at the wider one reaches it,
+ * `beside=` says the two are siblings wrapping nothing of each other's, and `requires=` says a target
+ * naming the one must also name the other. Left plain they read as three names somebody chose.
+ */
+const SCOPE_ATTRIBUTES = new Set(['parameter', 'inside', 'beside', 'requires']);
+
+/**
+ * What makes one of those an attribute at all: the single `=` it is written in front of.
+ *
+ * <p>⚠️ The same allowance {@link OPENS_A_BLOCK} makes, for the same reason — a product is free to own
+ * a permission called `inside` or a capability called `requires`, and `ScopeDeclarationParser` reads an
+ * attribute only where an identifier is followed by `T_EQ` too.
+ *
+ * <p>⚠️ The `(?!=)` is not decoration: `==` is a comparison, and without it a condition reading a
+ * property named after an attribute would paint that property as language.
+ */
+const ASSIGNS_A_SCOPE_ATTRIBUTE = /^[ \t]*=(?!=)/;
+
 const PLACEHOLDER = /^\$\{[^}\n]*}/;
 const SCOPE       = /^@[A-Za-z_]\w*/;
 
@@ -385,6 +407,11 @@ const parser: StreamParser<PolicyState> = {
             if (wasInCapabilityList) {
                 state.inCapabilityList = true;
                 return 'capability';
+            }
+
+            // ⚠️ A scope attribute only in front of its `=`; everywhere else these are ordinary words.
+            if (SCOPE_ATTRIBUTES.has(word) && stream.match(ASSIGNS_A_SCOPE_ATTRIBUTE, false)) {
+                return 'keyword';
             }
 
             const pinnedKind = nameKindAfter(wasAfterWord);
