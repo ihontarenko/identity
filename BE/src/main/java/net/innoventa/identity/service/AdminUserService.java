@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.List;
 import java.util.Comparator;
 import java.util.UUID;
@@ -55,6 +56,25 @@ public class AdminUserService {
     }
 
     /**
+     * One account, by its identifier.
+     *
+     * <h2>⚠️ Why this exists beside {@link #listUsers()} rather than being a filter over it</h2>
+     *
+     * <p>A caller that wants one account and filters the register for it reads every row in the
+     * installation to answer a question about one of them. That is invisible while the register is
+     * small and stops being invisible exactly once, at a size nobody chose — and the fix is then a
+     * change to whichever call site somebody happens to be looking at rather than to all of them.
+     *
+     * <p>It is also the honest shape: the question is <em>this account</em>, and a query that says so
+     * can be answered by an index. Absence is {@link Optional#empty()} rather than an exception,
+     * because the caller decides what a missing account means — the register renders nothing, the
+     * protocol says there is nothing to act on.
+     */
+    public Optional<IdentityUser> findUser(String accountId) {
+        return identityUserRepository.findById(accountId);
+    }
+
+    /**
      * Raises an account, with a password the administrator chose and the person must replace.
      *
      * <h2>⚠️ {@code LOCAL} only, and it is not a limitation</h2>
@@ -72,7 +92,7 @@ public class AdminUserService {
      */
     @Transactional
     public IdentityUser createUser(
-        String email, String displayName, String initialPassword, List<String> roles, String by) {
+        String email, String displayName, String initialPassword, List<String> roles, String grantedBy) {
 
         String       trimmed = email == null ? "" : email.trim();
         List<String> wanted  = roles == null ? List.of() : roles;
@@ -102,7 +122,7 @@ public class AdminUserService {
         // exists holding rights nobody asked for, and a grant pointing at a row that was rolled back,
         // are both worse than either half failing.
         for (String role : wanted) {
-            accessAdministrationService.assign(raised.getId(), role, by);
+            accessAdministrationService.assign(raised.getId(), role, grantedBy);
         }
 
         return raised;
@@ -156,10 +176,43 @@ public class AdminUserService {
 
         IdentityUser identityUser = requireById(targetUserId);
 
+        requireItHasAPasswordToSet(identityUser);
+
         identityUser.setHashedPassword(passwordEncoder.encode(newPassword));
         identityUser.setMustChangePassword(true);
 
         return identityUserRepository.save(identityUser);
+    }
+
+    /**
+     * ⚠️ <strong>{@code LOCAL} only — and on a federated account this was not a no-op, it was a
+     * lockout.</strong>
+     *
+     * <p>A {@code GOOGLE} or {@code GITHUB} row has no password by construction: sign-in is the provider's
+     * job, and {@code IdentityUserDetailsService} looks an email up scoped to {@code LOCAL}, so a hash
+     * written onto one of those rows is a credential no login form will ever check.
+     *
+     * <p>That much would merely be useless. What made it harmful is the flag that goes with it:
+     * {@code mustChangePassword} is enforced by {@code PasswordChangeRequiredFilter} across
+     * <em>everything</em> under {@code /api}, {@code /oauth2} and {@code /connect} — so the next time that
+     * person signs in through their provider, every product they reach is refused until they clear it. And
+     * the only path that clears it is {@code AccountService.changePassword}, which asks for the
+     * <em>current</em> password. They never had one. A working federated account is taken out of service by
+     * a control whose whole purpose is to put an account back into it.
+     *
+     * <p>So it is refused where it can be explained, rather than left to be discovered. This is also why
+     * the register hides the control on a federated row instead of merely disabling it: the reason belongs
+     * next to the account, not in a toast after the fact.
+     */
+    private void requireItHasAPasswordToSet(IdentityUser identityUser) {
+        if (identityUser.getProvider() == Provider.LOCAL) {
+            return;
+        }
+
+        throw new BusinessRuleViolationException(
+            "%s signs in through %s and has no password to set. Setting one would write a credential"
+                .formatted(identityUser.getEmail(), identityUser.getProvider())
+            + " nothing checks, and would then require a password change they cannot make.");
     }
 
     @Transactional
@@ -170,11 +223,35 @@ public class AdminUserService {
         return identityUserRepository.save(identityUser);
     }
 
+    /**
+     * Removes an account and everything it was granted.
+     *
+     * <h2>⚠️ The revoke is not tidiness — it is the half nothing else does (ID-12)</h2>
+     *
+     * <p>{@code access_role_assignments} and {@code access_subject_permissions} are created and mapped by
+     * {@code jmouse-access-jpa}. A library table cannot foreign-key into this product's
+     * {@code identity_users}, so <strong>nothing cascades and nothing ever will</strong>: without this
+     * line the rows simply stay, and they stay silently — no error, no orphan check, just a disclosure
+     * screen that grows a row reading "an account that no longer exists" every time somebody is removed.
+     *
+     * <p>⚠️ <strong>It runs before the delete, in one transaction.</strong> Before, because the revoke is
+     * the part that can fail and a half-done removal must be the one that leaves the account intact
+     * rather than the one that leaves grants pointing nowhere. In one transaction, because two calls
+     * from a controller cannot promise that.
+     *
+     * <p>The count is returned so the caller can say what went with it — an administrator deleting an
+     * account is entitled to know it also took away three roles.
+     */
     @Transactional
-    public void deleteUser(String actingAdminId, String targetUserId) {
+    public int deleteUser(String actingAdminId, String targetUserId) {
         requireNotSelf(actingAdminId, targetUserId);
+
         IdentityUser identityUser = requireById(targetUserId);
+        int          revoked      = accessAdministrationService.revokeEverythingFor(targetUserId);
+
         identityUserRepository.delete(identityUser);
+
+        return revoked;
     }
 
     private IdentityUser requireById(String id) {

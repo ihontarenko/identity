@@ -74,6 +74,32 @@ export function useAccessOverview({ enabled = true }: { enabled?: boolean } = {}
 }
 
 /**
+ * The same authorization, rendered back into the policy language — read-only.
+ *
+ * ⚠️ **Text, not JSON**, and its own query rather than a field on the overview: it is a whole document
+ * assembled from every row in the installation, and three of the four tabs never need it. Fetching it
+ * with the overview would put that work on every visit to the screen.
+ *
+ * ⚠️ **Invalidated by every write**, through the shared key — a projection that still showed the bundle
+ * somebody just changed would be the one tab on the screen that lies.
+ */
+export function usePolicyProjection({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...ACCESS_QUERY_KEY, "projection"],
+    queryFn: async () => {
+      const response = await httpClient.get<string>("/admin/access/projection", {
+        // ⚠️ axios sniffs a JSON-looking body and parses it; the document is plain text and must not be.
+        responseType: "text",
+        transformResponse: [(data: string) => data],
+      })
+
+      return response.data
+    },
+    enabled,
+  })
+}
+
+/**
  * Every write invalidates the overview **and** `/me`.
  *
  * ⚠️ The second one is not housekeeping: an administrator editing their own holdings changes what the
@@ -129,13 +155,4 @@ export function useUngrantPermission() {
   return useAccessMutation(({ accountId, permission }: { accountId: string; permission: string }) =>
     httpClient.delete("/admin/access/grants", { data: { accountId, permission } }),
   )
-}
-
-/** How a person is named on this screen — the email, since a display name is optional. */
-export function nameOf(account: AccountReference | null): string {
-  if (!account) {
-    return "(account no longer exists)"
-  }
-
-  return account.displayName ? `${account.displayName} · ${account.email}` : account.email
 }

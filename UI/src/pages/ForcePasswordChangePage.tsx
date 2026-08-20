@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { isAxiosError } from "axios"
 import { toast } from "sonner"
 import { KeyRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -7,14 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { changePassword } from "@/api/account"
+import { apiErrorMessage } from "@/api/errors"
 import { useAuth } from "@/context/AuthContext"
-
-function extractErrorMessage(error: unknown, fallback: string) {
-  if (isAxiosError(error) && typeof error.response?.data?.detail === "string") {
-    return error.response.data.detail as string
-  }
-  return fallback
-}
 
 /**
  * What somebody sees while their account is holding a password an administrator chose for it.
@@ -40,7 +33,7 @@ export function ForcePasswordChangePage() {
       toast.success("Password changed.")
       await refresh()
     } catch (error) {
-      toast.error(extractErrorMessage(error, "Could not change the password."))
+      toast.error(apiErrorMessage(error, "Could not change the password."))
     } finally {
       setSaving(false)
     }

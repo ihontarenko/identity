@@ -133,7 +133,21 @@ jmouse:
         - classpath:policy/identity.jmp
 
 identity:
+  # The one canonical public address. ⚠️ It is what Google's and GitHub's callbacks are built from
+  # (see `spring.security.oauth2.client` above) — those are registered with a third party and cannot
+  # follow whoever is asking, so this stays a concrete value.
   issuer: ${IDENTITY_ISSUER:http://localhost:9090}
+
+  # ⚠️ FALSE, so the OAuth2 metadata describes this server at whatever address it was REACHED. Spring
+  # Authorization Server derives the issuer per request when none is pinned, which is what lets one
+  # instance serve `localhost:9090` and `192.168.0.104:9090` with no build or restart between them.
+  # Pinned, the discovery document fetched over the network still announces `localhost`, and
+  # `oidc-client-ts` refuses it for an issuer mismatch — naming neither the address nor this setting.
+  #
+  # Turn it on where the address is fixed and should be asserted rather than inferred: behind a proxy
+  # that rewrites Host, or once anything validates a token's `iss`. Nothing here does today — every
+  # resource server checks the signature and the audience.
+  pin-issuer: ${IDENTITY_PIN_ISSUER:false}
 
   mcp:
     # ⚠️ `signing-secret` IS DELIBERATELY NOT DECLARED HERE, and its absence is what switches the whole
@@ -147,7 +161,7 @@ identity:
     # shape exists to end; see OnMcpConfigured.
     #
     # Why no generated default: it signs every protocol credential and it IS the confinement — a token
-    # presented to Innoventa, Moneta, Tessera or WiQ is not one that fails a check, it is a signature
+    # presented to Innoventa, Moneta, Tessera or Kiwi is not one that fails a check, it is a signature
     # that does not verify. One invented per run would silently break every connection on each restart
     # of the service every other product's sign-in depends on.
 
@@ -182,8 +196,8 @@ identity:
     innoventa:
       client-id: ${IDENTITY_INNOVENTA_CLIENT_ID:innoventa-web}
       client-secret: ${IDENTITY_INNOVENTA_CLIENT_SECRET:innoventa-dev-secret}
-      redirect-uri: ${IDENTITY_INNOVENTA_REDIRECT_URI:http://localhost:5010/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_INNOVENTA_POST_LOGOUT_REDIRECT_URI:http://localhost:5010}
+      redirect-uris: ${IDENTITY_INNOVENTA_REDIRECT_URIS:http://localhost:5010/login/oauth2/code/identity}
+      post-logout-redirect-uris: ${IDENTITY_INNOVENTA_POST_LOGOUT_REDIRECT_URIS:http://localhost:5010}
       audience: innoventa
       public-client: false
     # Public client — the Moneta UI is a pure browser SPA with nowhere safe to keep a
@@ -192,8 +206,8 @@ identity:
     # intentionally absent: a public client never presents one.
     moneta:
       client-id: ${IDENTITY_MONETA_CLIENT_ID:moneta-web}
-      redirect-uri: ${IDENTITY_MONETA_REDIRECT_URI:http://localhost:5020/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_MONETA_POST_LOGOUT_REDIRECT_URI:http://localhost:5020}
+      redirect-uris: ${IDENTITY_MONETA_REDIRECT_URIS:http://localhost:5020/login/oauth2/code/identity}
+      post-logout-redirect-uris: ${IDENTITY_MONETA_POST_LOGOUT_REDIRECT_URIS:http://localhost:5020}
       audience: moneta
       public-client: true
     # Public client — Innoventa Central's UI, same shape as moneta above (no secret, PKCE via
@@ -206,8 +220,8 @@ identity:
     # tracing that interceptor, not by guessing.
     central:
       client-id: ${IDENTITY_CENTRAL_CLIENT_ID:innoventa_central-web}
-      redirect-uri: ${IDENTITY_CENTRAL_REDIRECT_URI:http://localhost:5210/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_CENTRAL_POST_LOGOUT_REDIRECT_URI:http://localhost:5210}
+      redirect-uris: ${IDENTITY_CENTRAL_REDIRECT_URIS:http://localhost:5210/login/oauth2/code/identity}
+      post-logout-redirect-uris: ${IDENTITY_CENTRAL_POST_LOGOUT_REDIRECT_URIS:http://localhost:5210}
       audience: innoventa_central
       public-client: true
     # Public client — Tessera's UI (the Jira-style tracker), same shape as moneta/central above
@@ -216,28 +230,50 @@ identity:
     # in Central's accepted-audiences allow-list for Tessera to read shared translations.
     tessera:
       client-id: ${IDENTITY_TESSERA_CLIENT_ID:tessera-web}
-      redirect-uri: ${IDENTITY_TESSERA_REDIRECT_URI:http://localhost:5050/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_TESSERA_POST_LOGOUT_REDIRECT_URI:http://localhost:5050}
+      # ⚠️ TWO ADDRESSES, BECAUSE THIS INTERFACE IS OPENED FROM TWO PLACES. A phone or a second laptop
+      # reaches the Vite server at the machine's LAN address, and the interface derives its own
+      # `redirect_uri` from wherever it was loaded — so `192.168.0.104:5050` arrives as a different
+      # registration of the same client. OAuth matches exactly and has no wildcard, so an address that
+      # is not listed here is refused before anybody sees a login form.
+      #
+      # ⚠️ THAT NUMBER IS A DHCP LEASE AND WILL GO STALE ON ITS OWN. Reserve it on the router, or use
+      # the machine's name instead, or override the whole list through the environment variable —
+      # comma-separated binds the same as a YAML sequence.
+      redirect-uris: ${IDENTITY_TESSERA_REDIRECT_URIS:http://localhost:5050/login/oauth2/code/identity,http://192.168.0.104:5050/login/oauth2/code/identity}
+      post-logout-redirect-uris: ${IDENTITY_TESSERA_POST_LOGOUT_REDIRECT_URIS:http://localhost:5050,http://192.168.0.104:5050}
       audience: tessera
       public-client: true
-    # Public client — WiQ's UI (the knowledge product), same shape as the four above. audience "wiq" is
-    # what WiQ/BE's own SecurityConfiguration.jwtDecoder requires (wiq.security.audience).
+    # Public client — Kiwi's UI (the knowledge product), same shape as the four above. audience "kiwi" is
+    # what Kiwi/BE's own SecurityConfiguration.jwtDecoder requires (kiwi.security.audience).
     #
-    # ⚠️ ONE AUDIENCE FOR SEVERAL CALLERS, and that is WiQ's whole architecture rather than an oversight.
-    # Tessera's wiki tab and Innoventa's pages call WiQ DIRECTLY FROM THE BROWSER, carrying the reader's
-    # own token — so what arrives at 8110 is always a `wiq` token minted for this client, whichever
+    # ⚠️ ONE AUDIENCE FOR SEVERAL CALLERS, and that is Kiwi's whole architecture rather than an oversight.
+    # Tessera's wiki tab and Innoventa's pages call Kiwi DIRECTLY FROM THE BROWSER, carrying the reader's
+    # own token — so what arrives at 8110 is always a `kiwi` token minted for this client, whichever
     # product's interface the person happens to be looking at. There is no token relay and no
-    # product-to-product secret anywhere on that path (WIQ-1 §1). What makes those cross-origin calls
-    # work is CORS on WiQ's side, not a second registration here.
+    # product-to-product secret anywhere on that path (KW-1 §1). What makes those cross-origin calls
+    # work is CORS on Kiwi's side, not a second registration here.
     #
-    # ⚠️ NOT in Central's accepted-audiences, unlike `tessera`. WiQ does not use Central at all — its
-    # `t(key, fallback)` is backed by a local provider that returns the fallback (WIQ-1 §15) — so adding
+    # ⚠️ NOT in Central's accepted-audiences, unlike `tessera`. Kiwi does not use Central at all — its
+    # `t(key, fallback)` is backed by a local provider that returns the fallback (KW-1 §15) — so adding
     # it there would grant a reach nothing asks for.
-    wiq:
-      client-id: ${IDENTITY_WIQ_CLIENT_ID:wiq-web}
-      redirect-uri: ${IDENTITY_WIQ_REDIRECT_URI:http://localhost:5060/login/oauth2/code/identity}
-      post-logout-redirect-uri: ${IDENTITY_WIQ_POST_LOGOUT_REDIRECT_URI:http://localhost:5060}
-      audience: wiq
+    #
+    # ⚠️ 5070, WHERE EVERY OTHER PRODUCT HERE IS ON A ROUND NUMBER. Kiwi's interface was written for 5060
+    # and can never be served there: 5060 is SIP, and browsers carry it in a hardcoded blocked-port list,
+    # so Chrome answers ERR_UNSAFE_PORT before a request is even made. These two URIs are matched exactly
+    # by the authorization server, and this entry's origin is also what feeds Identity's own CORS
+    # allowlist (corsConfigurationSource derives it from redirect-uri) — so both have to move together
+    # with Kiwi/UI's vite.config.ts.
+    # ⚠️ RENAMED TWICE ON 2026-08-18 — `wiq` → `wiqi` → `kiwi` — and the client key, the client id and
+    # the audience move together every time. A token already in somebody's browser carries the previous
+    # `aud` and stops being accepted the moment Kiwi restarts; a browser holding a session for the
+    # previous client id is asking about a client that no longer exists. Both resolve by signing in
+    # again, and there is no migration that avoids it — which is why this is the one part of the rename
+    # that has to be deployed with everything at once.
+    kiwi:
+      client-id: ${IDENTITY_KIWI_CLIENT_ID:kiwi-web}
+      redirect-uris: ${IDENTITY_KIWI_REDIRECT_URIS:http://localhost:5070/login/oauth2/code/identity}
+      post-logout-redirect-uris: ${IDENTITY_KIWI_POST_LOGOUT_REDIRECT_URIS:http://localhost:5070}
+      audience: kiwi
       public-client: true
     # ⚠️ UNUSED, AND IT CANNOT BE USED — kept only so nobody registers it a second time.
     #
@@ -264,7 +300,7 @@ identity:
     # and RP-initiated logout is a browser flow it has no browser for.
     tessera-mcp:
       client-id: ${IDENTITY_TESSERA_MCP_CLIENT_ID:tessera-mcp}
-      redirect-uri: ${IDENTITY_TESSERA_MCP_REDIRECT_URI:http://127.0.0.1/callback}
+      redirect-uris: ${IDENTITY_TESSERA_MCP_REDIRECT_URIS:http://127.0.0.1/callback}
       audience: tessera
       public-client: true
 

@@ -126,11 +126,23 @@ public class AdminUserController {
             adminUserService.setEnabled(authentication.getName(), id, updateEnabledRequest.enabled()));
     }
 
+    /**
+     * ⚠️ <strong>200 with a body rather than 204, because the removal takes more than the account with
+     * it (ID-12).</strong>
+     *
+     * <p>Deleting somebody also takes back every role and personal grant they held, and an administrator
+     * is entitled to know that happened — a silent 204 makes the second half of the act invisible on the
+     * one screen where it is being performed. There is no other place it is reported: this service keeps
+     * no audit table, and the rows are gone by the time anybody could look.
+     */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @RequiresAccess(permission = Permissions.DELETE_USER, scope = Scopes.GLOBAL)
-    public void deleteUser(Authentication authentication, @PathVariable String id) {
-        adminUserService.deleteUser(authentication.getName(), id);
+    public DeletedAccountResponse deleteUser(Authentication authentication, @PathVariable String id) {
+        return new DeletedAccountResponse(adminUserService.deleteUser(authentication.getName(), id));
+    }
+
+    /** What went with the account — how many role assignments and personal grants were taken back. */
+    public record DeletedAccountResponse(int revokedGrants) {
     }
 
 }

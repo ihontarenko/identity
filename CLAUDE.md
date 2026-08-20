@@ -122,17 +122,33 @@ identity:
     innoventa:
       client-id: innoventa-web
       client-secret: ...
-      redirect-uri: http://localhost:5010/login/oauth2/code/identity
-      post-logout-redirect-uri: http://localhost:5010
+      redirect-uris: http://localhost:5010/login/oauth2/code/identity
+      post-logout-redirect-uris: http://localhost:5010
       audience: innoventa
       public-client: false
-    moneta:
-      client-id: moneta-web
-      redirect-uri: http://localhost:5020/login/oauth2/code/identity
-      post-logout-redirect-uri: http://localhost:5020
-      audience: moneta
+    tessera:
+      client-id: tessera-web
+      # ⚠️ PLURAL, AND ORDER MATTERS. OAuth matches `redirect_uri` exactly and has no wildcard, so
+      # every address an interface may be opened at is its own registration — a phone reaching the
+      # Vite server over the LAN sends `192.168.0.104:5050`, which is a different client as far as
+      # this server is concerned. The first entry is the canonical one: `ApplicationLinksController`
+      # links to it. Comma-separated binds the same as a YAML sequence, so one environment variable
+      # still configures several.
+      redirect-uris: >
+        http://localhost:5050/login/oauth2/code/identity,
+        http://192.168.0.104:5050/login/oauth2/code/identity
+      post-logout-redirect-uris: http://localhost:5050,http://192.168.0.104:5050
+      audience: tessera
       public-client: true   # no client-secret — PKCE replaces it, see Architecture above
 ```
+
+**`identity.pin-issuer` is `false`, and that is what makes more than one address work at all.** Spring
+Authorization Server derives the issuer from the current request when none is configured, so the
+discovery document fetched at `192.168.0.104:9090` announces that address rather than `localhost` —
+which is what `oidc-client-ts` compares its `authority` against before it will proceed. Pinned, the
+LAN case fails with an issuer mismatch that names neither the address nor the setting. `identity.issuer`
+is still a concrete value and still required: Google's and GitHub's callbacks are built from it and are
+registered with a third party, so they cannot follow whoever is asking.
 
 `post-logout-redirect-uri` is required for OIDC RP-Initiated Logout (`/connect/logout`, Spring
 Authorization Server's default end-session endpoint — enabled automatically) to actually redirect
@@ -144,7 +160,7 @@ Identity silently re-authenticated and bounced the user right back in without ev
 prompt).
 
 Client secrets and redirect URIs are overridable via `IDENTITY_<NAME>_CLIENT_ID` /
-`IDENTITY_<NAME>_CLIENT_SECRET` / `IDENTITY_<NAME>_REDIRECT_URI` environment variables — never commit
+`IDENTITY_<NAME>_CLIENT_SECRET` / `IDENTITY_<NAME>_REDIRECT_URIS` (comma-separated) environment variables — never commit
 real secrets to `application.yml`. `public-client` entries have no secret to override.
 
 ## Web UI (Login + Account)
@@ -237,6 +253,27 @@ apps. This only actually works once Identity's own callback URLs are registered 
   callback URL (breaks Innoventa's GitHub login until it's updated too). **Not yet resolved — GitHub
   login will fail with a redirect_uri mismatch until one of these is done manually in GitHub's
   Developer Settings.**
+
+## ⚠️ No Dynamic Client Registration — And What It Cost
+
+This service has **no RFC 7591 registration endpoint**, and its metadata therefore advertises no
+`registration_endpoint`. That is fine for every browser client (each is a block under
+`identity.clients`) and fatal for one kind of caller: **a Model Context Protocol client, which has
+nowhere to be told a client id.** It reads the authorization server's metadata, registers itself, and
+absent that endpoint refuses to continue — Claude Code stops with `Incompatible auth server: does not
+support dynamic client registration` *after* every discovery step has succeeded, which makes it look
+like a Tessera problem rather than this one.
+
+The `tessera-mcp` client under `identity.clients` was written for exactly that caller and could never be
+reached by it. It is left in place with the reasoning in a comment beside it, and **Tessera now issues its
+own credential for its own protocol endpoint** — confined to that endpoint, with the person still
+authenticated here (the consent screen sits behind an Identity session). See
+`Tessera/docs/adr/0020-tessera-issues-its-own-protocol-credential.md`.
+
+If a second product ever serves the protocol, that is the point to reconsider: a registration endpoint
+here, with the audience resolved from the `resource` parameter (RFC 8707) rather than from the client,
+would serve all of them — at the cost of an installation-wide authorization server that accepts anonymous
+client registrations.
 
 ## Open Items
 

@@ -1,56 +1,138 @@
-"use client"
-
 import * as React from "react"
-import { Tooltip as TooltipPrimitive } from "radix-ui"
+import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/helpers"
+import {
+  AnchoredPanel,
+  anchorProperties,
+  useAnchorName,
+  type AnchoredAlign,
+  type AnchoredSide,
+} from "@/components/ui/anchored"
 
+/**
+ * A tooltip, positioned by the browser rather than by a library — for the same reason as every other
+ * overlay here. See `components/ui/anchored.tsx`.
+ *
+ * ⚠️ **It never takes focus.** A tooltip describes the control the keyboard is already on; moving
+ * focus into it would take the keyboard away from the thing being described. `manageFocus={false}` is
+ * the whole of that decision.
+ */
+
+const TooltipDelayContext = React.createContext(0)
+
+/** Kept as a component so existing trees compile; all it carries now is the delay. */
 function TooltipProvider({
   delayDuration = 0,
-  ...properties
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+  children,
+}: {
+  delayDuration?: number
+  children: React.ReactNode
+}) {
+  return <TooltipDelayContext.Provider value={delayDuration}>{children}</TooltipDelayContext.Provider>
+}
+
+interface TooltipContextValue {
+  open: boolean
+  show: () => void
+  hide: () => void
+  anchorName: string
+}
+
+const TooltipContext = React.createContext<TooltipContextValue | null>(null)
+
+function useTooltip(component: string): TooltipContextValue {
+  const context = React.useContext(TooltipContext)
+
+  if (context === null) {
+    throw new Error(`${component} has to be used inside a <Tooltip>`)
+  }
+
+  return context
+}
+
+function Tooltip({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = React.useState(false)
+  const anchorName = useAnchorName()
+  const delay = React.useContext(TooltipDelayContext)
+  const timer = React.useRef<number | undefined>(undefined)
+
+  const show = React.useCallback(() => {
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setOpen(true), delay)
+  }, [delay])
+
+  const hide = React.useCallback(() => {
+    window.clearTimeout(timer.current)
+    setOpen(false)
+  }, [])
+
+  React.useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  const context = React.useMemo(() => ({ open, show, hide, anchorName }), [open, show, hide, anchorName])
+
   return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delayDuration={delayDuration}
+    <TooltipContext.Provider value={context}>
+      <div data-slot="tooltip" className="contents">
+        {children}
+      </div>
+    </TooltipContext.Provider>
+  )
+}
+
+function TooltipTrigger({
+  asChild = false,
+  style,
+  ...properties
+}: React.ComponentProps<"button"> & { asChild?: boolean }) {
+  const { show, hide, anchorName } = useTooltip("TooltipTrigger")
+  const Component = asChild ? Slot.Root : "button"
+
+  return (
+    <Component
+      data-slot="tooltip-trigger"
+      onPointerEnter={show}
+      onPointerLeave={hide}
+      onFocus={show}
+      onBlur={hide}
       {...properties}
+      {...anchorProperties(anchorName, style)}
     />
   )
 }
 
-function Tooltip({
-  ...properties
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...properties} />
-}
-
-function TooltipTrigger({
-  ...properties
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...properties} />
-}
-
 function TooltipContent({
   className,
-  sideOffset = 0,
+  side = "right",
+  align = "center",
+  sideOffset: _sideOffset,
   children,
   ...properties
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+}: React.ComponentProps<"div"> & {
+  side?: AnchoredSide
+  align?: AnchoredAlign
+  sideOffset?: number
+}) {
+  const { open, hide, anchorName } = useTooltip("TooltipContent")
+
   return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-          className
-        )}
-        {...properties}
-      >
-        {children}
-        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
+    <AnchoredPanel
+      anchorName={anchorName}
+      open={open}
+      onClose={hide}
+      side={side}
+      align={align}
+      manageFocus={false}
+      role="tooltip"
+      data-slot="tooltip-content"
+      className={cn(
+        "w-fit border-none bg-foreground px-3 py-1.5 text-xs text-balance text-background shadow-md",
+        className,
+      )}
+      {...properties}
+    >
+      {children}
+    </AnchoredPanel>
   )
 }
 

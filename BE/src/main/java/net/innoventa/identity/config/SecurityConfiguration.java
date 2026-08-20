@@ -42,6 +42,7 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -57,6 +58,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -106,7 +108,7 @@ public class SecurityConfiguration {
             .addFilterAfter(passwordChangeRequiredFilter, SecurityContextHolderFilter.class)
             .exceptionHandling(exceptionHandling -> exceptionHandling.defaultAuthenticationEntryPointFor(
                 new LoginUrlAuthenticationEntryPoint("/login"),
-                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
+                browserNavigation()))
             .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
 
         return httpSecurity.build();
@@ -212,9 +214,18 @@ public class SecurityConfiguration {
                 // .authenticationEntryPoint(...) call silences every defaultAuthenticationEntryPointFor
                 // registration outright (confirmed by driving both request shapes against a running
                 // instance: the HTML request still got a bare 401 instead of the expected redirect).
+                //
+                // ⚠️ /api/** IS REGISTERED FIRST AND NEVER REDIRECTS, whatever it says it accepts. The
+                // media type is a hint about a browser's intent; a path under /api is a fact about what
+                // the caller is. See browserNavigation() for the failure that made this belt as well as
+                // braces — a redirected /api/me is not a failed call, it is a SUCCESSFUL one carrying
+                // the wrong thing, and no client can defend itself against that.
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    new AntPathRequestMatcher("/api/**"))
                 .defaultAuthenticationEntryPointFor(
                     new LoginUrlAuthenticationEntryPoint("/login"),
-                    new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
+                    browserNavigation())
                 .defaultAuthenticationEntryPointFor(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                     AnyRequestMatcher.INSTANCE))
@@ -223,6 +234,41 @@ public class SecurityConfiguration {
                 .successHandler(oAuth2LoginSuccessHandler));
 
         return httpSecurity.build();
+    }
+
+    /**
+     * A request that is a person navigating, rather than a program calling.
+     *
+     * <h2>⚠️ Why {@code new MediaTypeRequestMatcher(TEXT_HTML)} on its own is a trap</h2>
+     *
+     * <p>It ignores nothing by default, and {@code text/html} is <em>compatible with</em> {@code *&#47;*}.
+     * Every {@code fetch}/XHR library sends {@code *&#47;*} somewhere in its Accept header — axios sends
+     * {@code application/json, text/plain, *&#47;*} on every request this SPA makes — so the matcher
+     * answered <em>yes, this is a browser navigating</em> for literally every call the interface made.
+     *
+     * <p><strong>The failure that produced was a blank application, and it was blank rather than broken
+     * for a reason worth understanding.</strong> Signed out, {@code GET /api/me} was answered with a 302
+     * to {@code /login}; the browser followed it; {@code /login} is served by the SPA fallback, so the
+     * call came back <strong>200 with an HTML document</strong>. Axios does not know that was not the
+     * answer to the question — it resolves, and {@code AuthContext} receives a non-empty string where a
+     * user belongs. {@code user.permissions.includes(…)} then threw during render, React unmounted the
+     * root, and the page went to bare background. ⚠️ Every visitor who was not signed in saw that.
+     *
+     * <p>Ignoring {@link MediaType#ALL} is what makes the matcher mean what it says: only a caller that
+     * asked for {@code text/html} <em>specifically</em> is sent to the login page. Everything else gets a
+     * 401, which is a thing a client can act on.
+     *
+     * <p>⚠️ This is the third time this service has produced a redirect where a status was wanted — see
+     * the {@code sendError} note in {@code McpConfiguration} and the CSRF one above. The pattern is not
+     * about any one endpoint: it is that <strong>Identity has a login page at all</strong>, so anything
+     * unauthenticated here has somewhere to be sent, and being sent there looks like success.
+     */
+    private static MediaTypeRequestMatcher browserNavigation() {
+        MediaTypeRequestMatcher matcher = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
+
+        matcher.setIgnoredMediaTypes(Set.of(MediaType.ALL));
+
+        return matcher;
     }
 
     @Bean
@@ -250,7 +296,6 @@ public class SecurityConfiguration {
             .clientId(client.clientId())
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .redirectUri(client.redirectUri())
             .scope(OidcScopes.OPENID)
             .scope(OidcScopes.PROFILE)
             .scope(OidcScopes.EMAIL)
@@ -264,12 +309,16 @@ public class SecurityConfiguration {
                 .refreshTokenTimeToLive(Duration.ofDays(7))
                 .build());
 
+        // ⚠️ EVERY ADDRESS THE INTERFACE MAY BE OPENED AT, because OAuth matches `redirect_uri`
+        // exactly and has no wildcard. `localhost:5050` and `192.168.0.104:5050` are two registrations
+        // of one client; the interface derives its own from wherever it was loaded, and an address
+        // missing here is refused before anybody sees a login form.
+        registeredUris(client.redirectUris()).forEach(registeredClientBuilder::redirectUri);
+
         // ⚠️ Optional, because not every client is a browser app that can be logged out of. An MCP
         // client holds a token and has no session to end — and `postLogoutRedirectUri(null)` throws,
         // so the absence has to be handled rather than passed through.
-        if (client.postLogoutRedirectUri() != null && !client.postLogoutRedirectUri().isBlank()) {
-            registeredClientBuilder.postLogoutRedirectUri(client.postLogoutRedirectUri());
-        }
+        registeredUris(client.postLogoutRedirectUris()).forEach(registeredClientBuilder::postLogoutRedirectUri);
 
         if (client.publicClient()) {
             registeredClientBuilder.clientAuthenticationMethod(ClientAuthenticationMethod.NONE);
@@ -283,6 +332,23 @@ public class SecurityConfiguration {
     }
 
     /**
+     * The configured addresses that are actually usable — absent, empty and blank all mean "none".
+     *
+     * <p>⚠️ Handled here rather than in a compact constructor on {@code ClientProperties}: javac drops
+     * a record's generic component signatures once one is declared, and the properties binder then
+     * sees a bare {@code List} it cannot fill with strings.
+     */
+    private static List<String> registeredUris(List<String> configured) {
+        if (configured == null) {
+            return List.of();
+        }
+        return configured.stream()
+            .filter(uri -> uri != null && !uri.isBlank())
+            .map(String::trim)
+            .toList();
+    }
+
+    /**
      * Scoped to public clients only — a confidential server-side client (innoventa today) never
      * makes a cross-origin browser request against this service, so it has no business in this list.
      */
@@ -290,7 +356,8 @@ public class SecurityConfiguration {
     CorsConfigurationSource corsConfigurationSource() {
         List<String> allowedOrigins = new ArrayList<>(identityProperties.clients().values().stream()
                 .filter(IdentityProperties.ClientProperties::publicClient)
-                .map(client -> URI.create(client.redirectUri()))
+                .flatMap(client -> registeredUris(client.redirectUris()).stream())
+                .map(URI::create)
                 // ⚠️ A loopback redirect is a NATIVE client, not a browser one — an MCP client opens the
                 // system browser and listens on 127.0.0.1 for the code. It makes no cross-origin request
                 // to this service ever, so adding its host here would widen CORS for a page served from
@@ -375,11 +442,31 @@ public class SecurityConfiguration {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
 
+    /**
+     * ⚠️ <strong>Unpinned by default, so this server describes itself at whatever address it was
+     * reached.</strong> Spring Authorization Server derives the issuer from the current request when
+     * none is configured, which is what lets one instance serve {@code http://localhost:9090} and
+     * {@code http://192.168.0.104:9090} without a build, a profile or a restart between them. Pinned,
+     * the discovery document reached over the network still announces {@code localhost}, and
+     * {@code oidc-client-ts} refuses it for an issuer mismatch — an error that names neither the
+     * address nor this setting.
+     *
+     * <p>⚠️ <strong>{@code identity.issuer} does NOT go away.</strong> It stays the one canonical
+     * public address, and Google's and GitHub's callbacks are still built from it — those are
+     * registered with a third party and cannot follow whoever is asking.
+     *
+     * <p>Set {@code identity.pin-issuer: true} where the address is fixed and should be asserted
+     * rather than inferred: behind a reverse proxy that rewrites the Host, or anywhere a token's
+     * {@code iss} is checked against a constant. ⚠️ Nothing in this workspace checks it today —
+     * every resource server validates the signature and the audience, not the issuer.
+     */
     @Bean
     AuthorizationServerSettings authorizationServerSettings() {
-        return AuthorizationServerSettings.builder()
-            .issuer(identityProperties.issuer())
-            .build();
+        AuthorizationServerSettings.Builder settings = AuthorizationServerSettings.builder();
+        if (identityProperties.pinIssuer()) {
+            settings.issuer(identityProperties.issuer());
+        }
+        return settings.build();
     }
 
     @Bean

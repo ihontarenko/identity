@@ -1,17 +1,10 @@
 import { toast } from "sonner"
-import { isAxiosError } from "axios"
 import { Plug, Unplug } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useConnections, useDisconnect } from "@/api/connections"
-
-function extractErrorMessage(error: unknown, fallback: string) {
-  if (isAxiosError(error) && typeof error.response?.data?.detail === "string") {
-    return error.response.data.detail as string
-  }
-  return fallback
-}
+import { apiErrorMessage } from "@/api/errors"
 
 function readable(moment: string | null) {
   if (!moment) {
@@ -83,7 +76,7 @@ export function ConnectedClients() {
                 disconnectMutation.mutate(connection.id, {
                   onSuccess: () => toast.success("Disconnected."),
                   onError: (error) =>
-                    toast.error(extractErrorMessage(error, "Could not disconnect it.")),
+                    toast.error(apiErrorMessage(error, "Could not disconnect it.")),
                 })
               }
             >

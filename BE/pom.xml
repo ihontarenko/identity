@@ -173,6 +173,15 @@
             <version>${jmouse.version}</version>
         </dependency>
 
+        <!-- The tables read back out as the document that describes them: the access screen's
+             "what is actually in force" pane. ⚠️ Its own module because the three it needs must not
+             depend on each other — see jmouse-access-projection's pom. -->
+        <dependency>
+            <groupId>org.jmouse</groupId>
+            <artifactId>jmouse-access-projection</artifactId>
+            <version>${jmouse.version}</version>
+        </dependency>
+
         <!-- The Model Context Protocol: the three authorization endpoints, the shared consent screen,
              and the transport. ⚠️ The endpoints appear only because Identity declares a CredentialIssuer
              bean — the module will not map public routes on somebody who has not said what minting

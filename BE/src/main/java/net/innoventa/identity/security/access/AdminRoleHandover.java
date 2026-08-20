@@ -78,7 +78,7 @@ public class AdminRoleHandover implements ApplicationRunner {
 
     private static final String HANDED_OVER = "HANDED_OVER";
 
-    private static final String BY = "bootstrap";
+    private static final String GRANTED_BY = "bootstrap";
 
     /**
      * Installation-wide, which is the only place either of these roles may be assigned.
@@ -148,7 +148,7 @@ public class AdminRoleHandover implements ApplicationRunner {
 
         for (String role : WHAT_ADMIN_MEANT) {
             Change assigned = access.assign(
-                subjectId, role, EVERYWHERE, HANDED_OVER, BY, null);
+                subjectId, role, EVERYWHERE, HANDED_OVER, GRANTED_BY, null);
 
             if (assigned.changed()) {
                 granted++;

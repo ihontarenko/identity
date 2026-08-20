@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -163,11 +164,11 @@ public class AccessAdministrationService {
      * a role and having to go elsewhere to fix it is being shown a problem and handed no tool.
      */
     @Transactional
-    public void assign(String accountId, String roleName, String by) {
+    public void assign(String accountId, String roleName, String grantedBy) {
         requireAccount(accountId);
         requireRole(roleName);
 
-        access.assign(accountId, roleName, EVERYWHERE, "DIRECT", by, null);
+        access.assign(accountId, roleName, EVERYWHERE, "DIRECT", grantedBy, null);
     }
 
     @Transactional
@@ -189,7 +190,7 @@ public class AccessAdministrationService {
      * list of named people rather than by expanding a role.
      */
     @Transactional
-    public void grant(String accountId, String permission, boolean allowed, String reason, String by) {
+    public void grant(String accountId, String permission, boolean allowed, String reason, String grantedBy) {
         requireAccount(accountId);
         requireKnownPermission(permission);
 
@@ -201,7 +202,7 @@ public class AccessAdministrationService {
 
         access.grant(accountId, permission, EVERYWHERE,
             allowed ? AccessAdministration.Effect.ALLOW : AccessAdministration.Effect.DENY,
-            reason, by, null);
+            reason, grantedBy, null);
     }
 
     @Transactional
@@ -229,6 +230,68 @@ public class AccessAdministrationService {
                 .map(entry -> new BundleEntryView(entry.permission(), entry.scopeType()))
                 .toList()))
             .sorted(Comparator.comparing(RoleView::name))
+            .toList();
+    }
+
+    /**
+     * Everything one account was ever granted, taken back at once — what deleting it has to do (ID-12).
+     *
+     * <h2>⚠️ Why the grants go with the account rather than being left as a record</h2>
+     *
+     * <p>A left-behind row is not a record of anything. This service has no audit table, so once the
+     * account is gone nothing can say <em>whose</em> row it was — the access screen literally renders it
+     * as "an account that no longer exists". Keeping it preserves no fact and costs a row that every
+     * disclosure read walks past forever.
+     *
+     * <p>⚠️ <strong>It is a library table, so nothing cascades and nothing ever will.</strong>
+     * {@code access_*} is created and mapped by {@code jmouse-access-jpa}; a foreign key from it into
+     * this product's {@code identity_users} would be the library depending on its consumer. That is why
+     * this has to be <em>called</em>, and why forgetting to call it fails silently rather than loudly.
+     *
+     * <p>Answers with how many rows it took back, so the caller can say so.
+     */
+    @Transactional
+    public int revokeEverythingFor(String accountId) {
+        return access.revokeAllFor(accountId);
+    }
+
+    /**
+     * The holdings of one role by one account — what a preview needs to say what it is about to take
+     * away.
+     *
+     * <h2>⚠️ Why this is not {@code overview().roleHoldings()} filtered down</h2>
+     *
+     * <p>{@link #overview()} builds the whole disclosure: every account in the installation, keyed, plus
+     * every holding, every role and every permission — because a screen shows all of them at once. A
+     * caller wanting <em>this account's</em> hold on <em>this role</em> and filtering that answer
+     * assembles the entire installation to keep one row, and does so on a path where its size is not
+     * even visible.
+     *
+     * <p>⚠️ <strong>It resolves exactly one account rather than the register.</strong> That is the whole
+     * saving: the map in {@code overview} exists to name a holder in a list of thousands, and here the
+     * holder is already known. An account that has since been deleted yields no holdings rather than a
+     * holding with a blank name — the preview then says there is nothing to remove, which is true.
+     *
+     * <p>It is still the disclosure port, so it is still governed by
+     * {@link Permissions#ADMINISTER_ACCESS} on the route that reaches it. Narrowing a read does not
+     * narrow who may perform it.
+     */
+    public List<RoleHoldingView> roleHoldingsOf(String accountId, String roleName) {
+        Optional<AccountReference> holder = accounts.findById(accountId).map(AccountReference::from);
+
+        if (holder.isEmpty()) {
+            return List.of();
+        }
+
+        return disclosure.roleHoldings().stream()
+            .filter(holding -> holding.subjectId().equals(accountId))
+            .filter(holding -> holding.roleName().equals(roleName))
+            .map(holding -> new RoleHoldingView(
+                holder.get(),
+                holding.roleName(),
+                holding.at().type().name(),
+                holding.grantedBy(),
+                holding.since()))
             .toList();
     }
 

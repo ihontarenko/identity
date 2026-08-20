@@ -91,9 +91,7 @@ public class UserTool implements ToolDefinition {
     private Object handleGet(ToolInvocation invocation) {
         String accountId = invocation.requiredString("accountId");
 
-        return adminUserService.listUsers().stream()
-            .filter(account -> account.getId().equals(accountId))
-            .findFirst()
+        return adminUserService.findUser(accountId)
             .map(UserTool::describe)
             // ⚠️ NOTHING_TO_ACT_ON rather than an invalid argument: the id is well formed, it simply
             // names nobody. A model told its argument was invalid retries with a different SHAPE; told

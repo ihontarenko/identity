@@ -93,9 +93,15 @@ function applyFontScale(scale: FontScale) {
   const value = FONT_SCALE_VALUES[scale]
   document.documentElement.style.setProperty("--font-scale", String(value))
   if (isMobileDevice()) {
+    // --body-zoom stays "1" here since body.style.zoom is never actually applied on mobile — the CSS
+    // that counter-scales against it (`.anchored-panel`'s max-height, index.css) must know the real
+    // applied multiplier, not just the chosen scale, or it would shrink a panel that was never
+    // zoomed in the first place.
+    document.documentElement.style.setProperty("--body-zoom", "1")
     return
   }
   ;(document.body.style as CSSStyleDeclaration & { zoom: string }).zoom = String(value)
+  document.documentElement.style.setProperty("--body-zoom", String(value))
 }
 
 interface ThemeProviderProperties {

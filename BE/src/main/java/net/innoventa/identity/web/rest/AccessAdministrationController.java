@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.innoventa.identity.security.access.Permissions;
 import net.innoventa.identity.security.access.Scopes;
 import net.innoventa.identity.service.AccessAdministrationService;
+import net.innoventa.identity.service.access.PolicyProjectionService;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AccessOverview;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.AssignRoleRequest;
 import net.innoventa.identity.web.rest.dto.AccessAdministrationDtos.GrantPermissionRequest;
@@ -42,11 +43,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccessAdministrationController {
 
     private final AccessAdministrationService accessAdministrationService;
+    private final PolicyProjectionService     policyProjectionService;
 
     /** Everything the screen shows, in one request — the vocabulary, the roles, and every holding. */
     @GetMapping
     public AccessOverview overview() {
         return accessAdministrationService.overview();
+    }
+
+    /**
+     * The same authorization, rendered back into the policy language — read-only.
+     *
+     * <p>⚠️ <strong>Text, not JSON.</strong> The value of this tab is that it reads like the file somebody
+     * already knows how to read; a structured payload the client re-renders would be a second implementation
+     * of the grammar, and the two would drift.
+     */
+    @GetMapping(value = "/projection", produces = "text/plain;charset=UTF-8")
+    public String projection() {
+        return policyProjectionService.render();
     }
 
     /**

@@ -36,6 +36,10 @@
    lack warn, falling back to the literal value shared by the other 8 light themes. */
 :root {
   --radius: 0.75rem;
+  /* Real multiplier ThemeContext's applyFontScale actually applies via body.style.zoom (1 on
+     mobile, where zoom is skipped) — lets CSS inside the zoomed subtree counter-scale a length back
+     to its true on-screen size, since zoom re-multiplies every length painted within it. */
+  --body-zoom: 1;
   --background: #FBF8F2;
   --foreground: #2A2A29;
   --card: #FFFEFA;
@@ -1013,6 +1017,64 @@
   --particle: #E82050;
 }
 
+/* ── Syntax colour ───────────────────────────────────────────────────────────
+   Ported verbatim from WiQ's `components/markdown/markdown.css`, itself Innoventa's house set.
+
+   ⚠️ On `:root` and deliberately NOT in any of the 27 theme blocks above. Decorative colour and legible
+   colour are two different jobs: a palette chosen for a sidebar put keywords and strings on the same hue
+   on some themes and a token a few percent off the background on others. So picking a theme recolours the
+   frame around code and never the code itself — see `lib/codemirror/highlightStyle.ts`.
+
+   Read by two things that must agree — the `HighlightStyle` and the stylesheet it generates for the
+   rendered policy (`lib/codemirror/staticHighlight.ts`). */
+:root {
+  --syntax-heading:     #2A2A29;
+  --syntax-keyword:     #C2185B;
+  --syntax-string:      #2F7A55;
+  --syntax-literal:     #A65A17;
+  --syntax-namespace:   #1B6E97;
+  --syntax-property:    #2E8BA8;
+  --syntax-declaration: #6A3FB5;
+  --syntax-variable:    #3A3A38;
+  --syntax-comment:     #8C8A85;
+  --syntax-operator:    #6E6C67;
+  --syntax-punctuation: #8C8A85;
+  --syntax-invalid:     #B3261E;
+
+  /* Policy (.jmp) — see `lib/codemirror/tags.ts` for why Identity paints a language at all.
+     `deny` is loud on purpose. */
+  --syntax-deny:        #B3261E;
+  --syntax-role:        #2E7D32;
+  --syntax-subject:     #9A6614;
+  --syntax-scope:       #6A3FB5;
+  --syntax-instance:    #3F8F4A;
+  --syntax-action:      #2E8BA8;
+}
+
+/* ThemeContext toggles `dark` on the root element alongside the theme's own class, so this is the one
+   place syntax colour follows anything the user picked — light versus dark, and nothing finer. */
+:root.dark {
+  --syntax-heading:     #E8E6E0;
+  --syntax-keyword:     #FF7EB6;
+  --syntax-string:      #7FD8A6;
+  --syntax-literal:     #FFAB70;
+  --syntax-namespace:   #6FC3E8;
+  --syntax-property:    #86D8F0;
+  --syntax-declaration: #C3A6FF;
+  --syntax-variable:    #D9D6CF;
+  --syntax-comment:     #8B8880;
+  --syntax-operator:    #A9A69F;
+  --syntax-punctuation: #8B8880;
+  --syntax-invalid:     #FF6B60;
+
+  --syntax-deny:        #FF6B60;
+  --syntax-role:        #7EE787;
+  --syntax-subject:     #E3B341;
+  --syntax-scope:       #C3A6FF;
+  --syntax-instance:    #9BE29B;
+  --syntax-action:      #86D8F0;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -1070,6 +1132,41 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* ⚠️ EVERY DROPDOWN, MENU, SELECT AND TOOLTIP IN THIS APPLICATION IS POSITIONED BY THESE SEVEN
+     LINES, and by nothing in JavaScript. See `components/ui/anchored.tsx` for the measurements, but
+     the short version: text size is `zoom`, and a JS positioner divides a trigger's measured rect by
+     the scale it detects and then cannot reconcile a `position: fixed` containing block — a trigger at
+     y=18 opened its panel at y=654. The browser's own anchor positioning has no such arithmetic.
+
+     `position-area` is per-instance (side + alignment) and set inline; `position-anchor` names the
+     trigger and is generated per pair. `inset: auto` is required — a `position: fixed` element defaults
+     to `inset: 0`, which would stretch it across the viewport and leave the area nothing to place.
+
+     `margin-block` and not `margin-top`: the gap has to land on whichever side the fallback chose, and
+     an inline margin would shift the panel off the alignment it was asked for.
+
+     The max-height is counter-scaled against --body-zoom: the panel lives inside the zoomed body, so
+     a length written here is re-multiplied at paint. */
+  .anchored-panel {
+    position: fixed;
+    inset: auto;
+    position-anchor: inherit;
+    position-area: var(--anchored-area, bottom span-right);
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    margin-block: 4px;
+    max-height: calc(70vh / var(--body-zoom, 1));
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* The gap belongs on whichever axis the panel actually sits on. A block margin on a side-anchored
+     panel leaves it touching its trigger and pushes it around on the axis it is being centred on. */
+  .anchored-panel[data-side="left"],
+  .anchored-panel[data-side="right"] {
+    margin-block: 0;
+    margin-inline: 4px;
   }
 }
 

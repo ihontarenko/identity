@@ -130,12 +130,10 @@ public class AccessTool implements ToolDefinition {
         String accountId = invocation.requiredString("accountId");
         String roleName  = invocation.requiredString("roleName");
 
-        List<AffectedRecords.Record> holdings = accessAdministrationService.overview().roleHoldings()
-            .stream()
-            .filter(holding -> holding.account() != null && holding.account().id().equals(accountId))
-            .filter(holding -> holding.roleName().equals(roleName))
-            .map(AccessTool::asRecord)
-            .toList();
+        List<AffectedRecords.Record> holdings =
+            accessAdministrationService.roleHoldingsOf(accountId, roleName).stream()
+                .map(AccessTool::asRecord)
+                .toList();
 
         return new AffectedRecords(holdings, holdings.size());
     }

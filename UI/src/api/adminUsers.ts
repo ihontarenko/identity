@@ -39,8 +39,22 @@ async function setUserEnabled(id: string, enabled: boolean): Promise<AdminUser> 
   return response.data
 }
 
-async function deleteUserById(id: string): Promise<void> {
-  await httpClient.delete(`/admin/users/${id}`)
+/**
+ * What went with the account.
+ *
+ * ⚠️ Deleting somebody also takes back every role and personal grant they held (ID-12) — the `access_*`
+ * tables belong to `jmouse-access-jpa` and cannot foreign-key into `identity_users`, so nothing cascades
+ * and the revoke is an explicit second act. The count is how the screen gets to say the second act
+ * happened; without it the removal looks like it only touched the register.
+ */
+export interface DeletedAccount {
+  revokedGrants: number
+}
+
+async function deleteUserById(id: string): Promise<DeletedAccount> {
+  const response = await httpClient.delete<DeletedAccount>(`/admin/users/${id}`)
+
+  return response.data
 }
 
 export function useAdminUsers() {
