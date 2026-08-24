@@ -1,0 +1,1557 @@
+<!doctype html>
+<html lang="uk" class="cream">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Identity — макети: хаб продуктів і вхід</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* =========================================================================================
+         Токени — НЕ вигадані. Це буквальні палітри з Identity/UI/src/index.css (порт усіх 27 тем
+         Innoventa), плюс шрифти з Identity/UI/index.html. Шість тем тут — по три світлі й темні —
+         щоб було видно, що кожен макет живе в усіх 27, а не лише в дефолтній.
+         ========================================================================================= */
+
+      :root {
+        --font-sans: "DM Sans", system-ui, sans-serif;
+        --font-display: "Space Grotesk", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", "Courier New", monospace;
+        --radius: 0.75rem;
+        --radius-md: 0.625rem;
+        --radius-sm: 0.5rem;
+      }
+
+      .cream {
+        --background: #fbf8f2; --foreground: #2a2a29;
+        --card: #fffefa; --card-foreground: #2a2a29;
+        --primary: #1e78a4; --primary-foreground: #fbf8f2;
+        --secondary: #faf6ec; --secondary-foreground: #4d4d4c;
+        --muted: #faf6ec; --muted-foreground: #7c7b78;
+        --accent: #e2eef4; --accent-foreground: #155778;
+        --destructive: #b3261e;
+        --border: #e7e1d1; --input: #dcd4bf; --ring: #1e78a4;
+        --sidebar: #f4efe4; --sidebar-border: #e7e1d1;
+        --ink-4: #a9a7a2;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .sage {
+        --background: #f5f4ef; --foreground: #1c2420;
+        --card: #fafaf6; --card-foreground: #1c2420;
+        --primary: #2e7d52; --primary-foreground: #f5f4ef;
+        --secondary: #f0efe8; --secondary-foreground: #394740;
+        --muted: #f0efe8; --muted-foreground: #6b7a70;
+        --accent: #d6efdf; --accent-foreground: #1a5a39;
+        --destructive: #b3261e;
+        --border: #d8d5c8; --input: #c8c4b4; --ring: #2e7d52;
+        --sidebar: #eceae1; --sidebar-border: #d8d5c8;
+        --ink-4: #9daaa0;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .rose {
+        --background: #fbf3f5; --foreground: #28141c;
+        --card: #fef8fa; --card-foreground: #28141c;
+        --primary: #c62060; --primary-foreground: #fbf3f5;
+        --secondary: #f8ecef; --secondary-foreground: #522838;
+        --muted: #f8ecef; --muted-foreground: #845060;
+        --accent: #fcdde9; --accent-foreground: #900040;
+        --destructive: #b3261e;
+        --border: #e4c8d0; --input: #d4b0bb; --ring: #c62060;
+        --sidebar: #f4e4e8; --sidebar-border: #e4c8d0;
+        --ink-4: #b48090;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .midnight {
+        --background: #14181e; --foreground: #e8eef4;
+        --card: #252e3a; --card-foreground: #e8eef4;
+        --primary: #40d080; --primary-foreground: #14181e;
+        --secondary: #2d3846; --secondary-foreground: #c0ccd8;
+        --muted: #2d3846; --muted-foreground: #8090a4;
+        --accent: #0e3020; --accent-foreground: #80f0b8;
+        --destructive: #8c2c2c;
+        --border: #2e3848; --input: #3c4858; --ring: #40d080;
+        --sidebar: #1e242c; --sidebar-border: #2e3848;
+        --ink-4: #505e70;
+        --warning: #8c6c1c; --success: #2a6e48;
+      }
+
+      .dracula {
+        --background: #282a36; --foreground: #f8f8f2;
+        --card: #383a58; --card-foreground: #f8f8f2;
+        --primary: #bd93f9; --primary-foreground: #282a36;
+        --secondary: #414364; --secondary-foreground: #c0c0d0;
+        --muted: #414364; --muted-foreground: #7484bc;
+        --accent: #1e1030; --accent-foreground: #ddb8ff;
+        --destructive: #884040;
+        --border: #4a4d68; --input: #5a5e7c; --ring: #bd93f9;
+        --sidebar: #2f3146; --sidebar-border: #4a4d68;
+        --ink-4: #5c6498;
+        --warning: #886018; --success: #30704a;
+      }
+
+      .one-dark {
+        --background: #21252b; --foreground: #abb2bf;
+        --card: #31363f; --card-foreground: #abb2bf;
+        --primary: #61afef; --primary-foreground: #21252b;
+        --secondary: #3a3f49; --secondary-foreground: #808898;
+        --muted: #3a3f49; --muted-foreground: #70787e;
+        --accent: #102030; --accent-foreground: #90ccff;
+        --destructive: #784048;
+        --border: #3e4451; --input: #4a5060; --ring: #61afef;
+        --sidebar: #282c34; --sidebar-border: #3e4451;
+        --ink-4: #58606a;
+        --warning: #786020; --success: #2a6830;
+      }
+
+      /* Кольори продуктів — сталі, бо продукт не міняє колір разом із темою користувача. */
+      .brand-innoventa { --brand: #1e78a4; }
+      .brand-moneta    { --brand: #2e7d52; }
+      .brand-central   { --brand: #6b3fcc; }
+      .brand-tessera   { --brand: #c05020; }
+      .brand-kiwi      { --brand: #6e9b2c; }
+
+      /* ============================== каркас галереї ============================== */
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: var(--sidebar);
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+      p { margin: 0; }
+      a { color: inherit; }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.875rem 1.5rem;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .topbar-title { display: flex; align-items: center; gap: 0.625rem; margin-right: auto; }
+      .topbar-title h1 { font-size: 1rem; }
+      .topbar-title span { font-size: 0.75rem; color: var(--muted-foreground); }
+
+      .swatches { display: flex; gap: 0.375rem; }
+
+      .swatch {
+        width: 1.75rem; height: 1.75rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        cursor: pointer;
+        padding: 0;
+        display: grid; place-items: center;
+      }
+      .swatch i { display: block; width: 0.875rem; height: 0.875rem; border-radius: 999px; }
+      .swatch[aria-pressed="true"] { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+      .jump { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+      .jump a {
+        font-size: 0.75rem;
+        text-decoration: none;
+        padding: 0.25rem 0.625rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--muted-foreground);
+      }
+      .jump a:hover { color: var(--foreground); border-color: var(--input); }
+
+      .page { max-width: 76rem; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+
+      .intro { max-width: 46rem; margin-bottom: 3rem; }
+      .intro h2 { font-size: 1.75rem; margin-bottom: 0.75rem; }
+      .intro p { color: var(--muted-foreground); font-size: 0.9375rem; line-height: 1.7; }
+      .intro p + p { margin-top: 0.75rem; }
+
+      .section-head { margin: 4rem 0 1.5rem; display: flex; align-items: baseline; gap: 0.75rem; }
+      .section-head h2 { font-size: 1.375rem; }
+      .section-head span { font-size: 0.8125rem; color: var(--muted-foreground); }
+
+      .mock { margin-bottom: 3.5rem; }
+
+      .mock-head { display: flex; align-items: flex-start; gap: 0.875rem; margin-bottom: 0.875rem; }
+
+      .mock-index {
+        flex: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 500;
+        width: 2.25rem; height: 2.25rem;
+        display: grid; place-items: center;
+        border-radius: var(--radius-md);
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+      .mock-head h3 { font-size: 1.0625rem; }
+      .mock-head p { font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.1875rem; }
+
+      .tags { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem; }
+      .tags li {
+        list-style: none;
+        font-size: 0.6875rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-foreground);
+      }
+
+      /* Екран — фальшиве вікно застосунку. Межа і хром відділяють макет від сторінки. */
+      .screen {
+        background: var(--background);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 28px -12px rgb(0 0 0 / 0.12);
+      }
+
+      .chrome {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--sidebar);
+        border-bottom: 1px solid var(--border);
+      }
+      .chrome i { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--ink-4); opacity: 0.5; }
+      .chrome span {
+        margin-left: 0.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        color: var(--muted-foreground);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.125rem 0.625rem;
+      }
+
+      /* ============================== примітиви інтерфейсу ============================== */
+
+      .appbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.5rem;
+        height: 3.5rem;
+        padding: 0 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .brandline { display: flex; align-items: center; gap: 0.5rem; }
+      .brandline b { font-family: var(--font-display); font-size: 1.0625rem; letter-spacing: -0.02em; }
+
+      .mark {
+        flex: none;
+        display: grid; place-items: center;
+        border-radius: 10px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        width: 2.25rem; height: 2.25rem;
+      }
+      .mark svg { width: 1.25rem; height: 1.25rem; }
+      .mark.sm { width: 2rem; height: 2rem; border-radius: 8px; }
+      .mark.sm svg { width: 1.0625rem; height: 1.0625rem; }
+      .mark.lg { width: 3rem; height: 3rem; border-radius: 12px; }
+      .mark.lg svg { width: 1.625rem; height: 1.625rem; }
+      .mark.xl { width: 4rem; height: 4rem; border-radius: 16px; }
+      .mark.xl svg { width: 2rem; height: 2rem; }
+      .mark.soft { background: var(--accent); color: var(--accent-foreground); }
+      .mark.tinted { background: color-mix(in srgb, var(--brand) 14%, var(--card)); color: var(--brand); }
+      .mark.solid-brand { background: var(--brand); color: #fff; }
+
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        height: 2.25rem;
+        padding: 0 0.875rem;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        font: 500 0.875rem/1 var(--font-sans);
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+      }
+      .btn svg { width: 1rem; height: 1rem; }
+      .btn.primary { background: var(--primary); color: var(--primary-foreground); }
+      .btn.outline { background: transparent; border-color: var(--input); color: var(--foreground); }
+      .btn.ghost { background: transparent; color: var(--muted-foreground); }
+      .btn.sm { height: 2rem; font-size: 0.8125rem; padding: 0 0.75rem; }
+      .btn.lg { height: 2.625rem; font-size: 0.9375rem; padding: 0 1.125rem; }
+      .btn.block { width: 100%; }
+      .btn.brand { background: var(--brand); color: #fff; }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+      }
+      .card-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; }
+      .card-description { font-size: 0.8125rem; color: var(--muted-foreground); line-height: 1.55; }
+
+      .field { display: flex; flex-direction: column; gap: 0.375rem; }
+      .field label { font-size: 0.8125rem; font-weight: 500; }
+      .field .row { display: flex; align-items: baseline; justify-content: space-between; }
+      .field .row a { font-size: 0.75rem; color: var(--muted-foreground); text-decoration: none; }
+
+      .input {
+        display: flex; align-items: center; gap: 0.5rem;
+        height: 2.25rem;
+        padding: 0 0.75rem;
+        border: 1px solid var(--input);
+        border-radius: var(--radius-md);
+        background: transparent;
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+      }
+      .input svg { width: 1rem; height: 1rem; opacity: 0.6; flex: none; }
+      .input.filled { color: var(--foreground); }
+      .input.focused { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent); }
+      .input.flat {
+        border: 0; border-bottom: 1px solid var(--input);
+        border-radius: 0; padding-left: 0; height: 2.5rem;
+      }
+      .input.lg { height: 2.625rem; }
+
+      .dots { letter-spacing: 0.22em; }
+
+      .sep { display: flex; align-items: center; gap: 0.75rem; }
+      .sep::before, .sep::after { content: ""; height: 1px; flex: 1; background: var(--border); }
+      .sep span { font-size: 0.6875rem; color: var(--muted-foreground); }
+
+      .muted { color: var(--muted-foreground); }
+      .tiny { font-size: 0.75rem; }
+      .small { font-size: 0.8125rem; }
+      .mono { font-family: var(--font-mono); }
+
+      .badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        font-size: 0.6875rem; font-weight: 500;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        background: var(--accent); color: var(--accent-foreground);
+      }
+      .badge svg { width: 0.75rem; height: 0.75rem; }
+      .badge.outline { background: transparent; border: 1px solid var(--border); color: var(--muted-foreground); }
+      .badge.ok { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
+
+      .kbd {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        padding: 0.125rem 0.375rem;
+        border: 1px solid var(--border);
+        border-bottom-width: 2px;
+        border-radius: 6px;
+        color: var(--muted-foreground);
+        background: var(--card);
+      }
+
+      .avatar {
+        width: 2.5rem; height: 2.5rem;
+        border-radius: 999px;
+        display: grid; place-items: center;
+        background: var(--accent); color: var(--accent-foreground);
+        font-family: var(--font-display); font-weight: 600; font-size: 0.875rem;
+      }
+      .avatar.lg { width: 3.5rem; height: 3.5rem; font-size: 1.125rem; }
+
+      .stack { display: flex; flex-direction: column; }
+      .center { display: flex; align-items: center; }
+      .between { display: flex; align-items: center; justify-content: space-between; }
+      .wrap { flex-wrap: wrap; }
+      .grow { flex: 1; min-width: 0; }
+      .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      .g2 { gap: 0.5rem; } .g3 { gap: 0.75rem; } .g4 { gap: 1rem; } .g6 { gap: 1.5rem; } .g8 { gap: 2rem; }
+
+      .pad { padding: 2.5rem 1.5rem; }
+      .pad-lg { padding: 3.5rem 2rem; }
+
+      /* ============================== окремі композиції ============================== */
+
+      .product-card {
+        display: flex; flex-direction: column; gap: 0.75rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.125rem;
+        transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+      }
+      .product-card:hover {
+        border-color: color-mix(in srgb, var(--brand) 45%, var(--border));
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--brand) 60%, transparent);
+      }
+
+      .product-card > .btn { align-self: flex-start; }
+
+      .grid-products { display: grid; gap: 0.875rem; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); }
+
+      .launcher {
+        width: 100%;
+        max-width: 34rem;
+        margin: 0 auto;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 24px 48px -24px rgb(0 0 0 / 0.28);
+      }
+      .launcher-search { display: flex; align-items: center; gap: 0.625rem; padding: 0.875rem 1rem; border-bottom: 1px solid var(--border); }
+      .launcher-search svg { width: 1.125rem; height: 1.125rem; color: var(--muted-foreground); }
+      .launcher-search input { all: unset; flex: 1; font-size: 0.9375rem; color: var(--muted-foreground); }
+      .launcher-group { padding: 0.5rem 0.75rem 0.25rem; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); }
+      .launcher-row {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        margin: 0 0.25rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+      }
+      .launcher-row.active { background: var(--secondary); }
+      .launcher-row .chev { color: var(--ink-4); width: 1rem; height: 1rem; flex: none; }
+      .launcher-foot { display: flex; gap: 1rem; padding: 0.625rem 1rem; border-top: 1px solid var(--border); background: var(--secondary); }
+
+      .rail-row {
+        display: flex; align-items: center; gap: 0.875rem;
+        padding: 0.875rem 1rem;
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--brand);
+        border-radius: var(--radius-md);
+        background: var(--card);
+      }
+
+      .bento { display: grid; gap: 0.875rem; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 7.5rem; }
+      .bento > * {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card);
+        padding: 1rem;
+        display: flex; flex-direction: column; justify-content: space-between;
+      }
+      .bento .feature {
+        grid-column: span 2; grid-row: span 2;
+        background:
+          radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 60%),
+          var(--card);
+        border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+      }
+      .bento .wide { grid-column: span 2; }
+
+      .pass {
+        display: flex;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .pass-stub {
+        flex: none;
+        width: 6rem;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+        background: color-mix(in srgb, var(--brand) 12%, var(--card));
+        color: var(--brand);
+        border-right: 2px dashed color-mix(in srgb, var(--brand) 35%, var(--border));
+      }
+      .pass-stub .code { font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.08em; }
+      .pass-body { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.875rem 1.125rem; }
+
+      .split { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 26rem; }
+      .split-brand {
+        display: flex; flex-direction: column; justify-content: space-between;
+        padding: 2rem;
+        background:
+          radial-gradient(110% 80% at 15% 0%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 62%),
+          var(--sidebar);
+        border-right: 1px solid var(--border);
+      }
+      .split-form { display: flex; align-items: center; justify-content: center; padding: 2rem; }
+
+      .steps { display: flex; gap: 0.375rem; }
+      .steps i { width: 1.5rem; height: 0.25rem; border-radius: 999px; background: var(--border); display: block; }
+      .steps i.on { background: var(--primary); }
+
+      .scopes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+      .scopes li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; }
+      .scopes svg { width: 0.875rem; height: 0.875rem; color: var(--success); flex: none; }
+
+      .handoff { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+      .handoff .line { width: 2.5rem; height: 1px; background: var(--border); position: relative; }
+      .handoff .line::after {
+        content: ""; position: absolute; right: 0; top: -3px;
+        border-left: 6px solid var(--border);
+        border-top: 3.5px solid transparent;
+        border-bottom: 3.5px solid transparent;
+      }
+
+      .notes { margin-top: 4rem; }
+      .notes ul { margin: 0.75rem 0 0; padding-left: 1.125rem; color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.8; }
+      .notes strong { color: var(--foreground); }
+
+      @media (max-width: 60rem) {
+        .split { grid-template-columns: 1fr; }
+        .split-brand { display: none; }
+        .bento { grid-template-columns: repeat(2, 1fr); }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Марки продуктів — байт у байт ті самі геометрії, що в *Mark.tsx кожного продукту. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="mark-identity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" />
+        <path d="M9.5 12l1.8 1.8L14.5 10" />
+      </symbol>
+      <symbol id="mark-innoventa" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="16" y1="5" x2="16" y2="16" />
+        <polyline points="4,12 16,16 28,12" />
+        <polyline points="4,17 16,21 28,17" opacity="0.8" />
+        <polyline points="4,22 16,26 28,22" opacity="0.5" />
+      </symbol>
+      <symbol id="mark-moneta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="17" r="3.2" />
+        <circle cx="12.5" cy="13" r="4.2" />
+        <circle cx="19" cy="7.5" r="5.2" />
+      </symbol>
+      <symbol id="mark-central" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12,8 L12,16 M8,12 L16,12 M9.2,9.2 L14.8,14.8 M14.8,9.2 L9.2,14.8" />
+      </symbol>
+      <symbol id="mark-tessera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+        <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" transform="rotate(45 12 12)" />
+      </symbol>
+      <symbol id="mark-kiwi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+        <path d="M8 8v8" /><path d="M12 8v8" /><path d="M16 8v8" />
+      </symbol>
+
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+      </symbol>
+      <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+      </symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+      </symbol>
+      <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" /><path d="M9.5 12l1.8 1.8L14.5 10" />
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </symbol>
+      <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 5L2 7" />
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6 9 17l-5-5" />
+      </symbol>
+      <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
+      </symbol>
+      <symbol id="icon-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+        <path d="M9 18c-4.51 2-5-2-7-2" />
+      </symbol>
+      <symbol id="icon-google" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 12a8 8 0 1 0-2.5 5.8" /><path d="M20.5 12H12" />
+      </symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+      </symbol>
+    </svg>
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+        <div class="stack">
+          <h1>Identity — 10 макетів</h1>
+          <span>хаб продуктів × 5 · сторінка входу × 5</span>
+        </div>
+      </div>
+
+      <nav class="jump">
+        <a href="#hub">Хаб</a>
+        <a href="#login">Вхід</a>
+        <a href="#notes">Що я б узяв</a>
+      </nav>
+
+      <div class="swatches" id="swatches">
+        <button class="swatch" data-theme="cream" aria-pressed="true" title="Cream"><i style="background: #1e78a4"></i></button>
+        <button class="swatch" data-theme="sage" aria-pressed="false" title="Sage"><i style="background: #2e7d52"></i></button>
+        <button class="swatch" data-theme="rose" aria-pressed="false" title="Rose"><i style="background: #c62060"></i></button>
+        <button class="swatch" data-theme="midnight" aria-pressed="false" title="Midnight"><i style="background: #40d080"></i></button>
+        <button class="swatch" data-theme="dracula" aria-pressed="false" title="Dracula"><i style="background: #bd93f9"></i></button>
+        <button class="swatch" data-theme="one-dark" aria-pressed="false" title="One Dark"><i style="background: #61afef"></i></button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="intro">
+        <h2>Десять макетів на справжніх токенах Identity</h2>
+        <p>
+          Нічого тут не намальовано «на око». Кольори — це буквальні палітри з
+          <span class="mono small">Identity/UI/src/index.css</span> (порт усіх 27 тем Innoventa; шість із них
+          перемикаються кнопками вгорі праворуч). Шрифти — <b>Space&nbsp;Grotesk</b> для заголовків і
+          <b>DM&nbsp;Sans</b> для тексту, як в <span class="mono small">index.html</span>. Радіуси, висоти
+          кнопок і полів, товщина меж — з тих самих shadcn-токенів, якими зібрані реальні сторінки.
+        </p>
+        <p>
+          Марки продуктів — не ілюстрації: це ті самі геометрії, що в
+          <span class="mono small">*Mark.tsx</span> кожного продукту. Kiwi доданий у список, хоча реальна
+          <span class="mono small">LandingPage.tsx</span> його ще не показує — родина вже з шести, і хаб на
+          чотирьох плитках бреше.
+        </p>
+        <p class="muted tiny" style="margin-top: 1rem">
+          Кожен макет підписаний тим, <b>що саме в ньому інше</b> — щоб вибирати ідею, а не картинку.
+        </p>
+      </section>
+
+      <!-- ================================================================================
+           A. ХАБ ПРОДУКТІВ
+           ================================================================================ -->
+
+      <div class="section-head" id="hub">
+        <h2>A · Сторінка переходу на продукт</h2>
+        <span>що людина бачить після входу — куди йти далі</span>
+      </div>
+
+      <!-- A1 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">A1</span>
+          <div class="grow">
+            <h3>Герой і сітка — теперішня, доведена до ладу</h3>
+            <p>Та сама будова, що зараз, але марка стала великою, картки дихають, а рядок акаунта нарешті є.</p>
+            <ul class="tags">
+              <li>найменший ризик</li>
+              <li>шість продуктів замість чотирьох</li>
+              <li>hover у колір продукту</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <div class="center g2">
+              <span class="badge"><svg><use href="#icon-check" /></svg> Signed in</span>
+              <a class="btn ghost sm"><svg><use href="#icon-user" /></svg> Ivan</a>
+            </div>
+          </div>
+
+          <div class="pad">
+            <div class="stack g4" style="align-items: center; text-align: center; margin-bottom: 2rem">
+              <span class="mark xl"><svg><use href="#mark-identity" /></svg></span>
+              <div class="stack g2">
+                <h2 style="font-size: 2rem">Identity</h2>
+                <p class="muted small" style="max-width: 30rem">
+                  One account for the whole family. Sign in once — Innoventa, Moneta, Central, Tessera and
+                  Kiwi all take it from here.
+                </p>
+              </div>
+              <div class="center g2 wrap" style="justify-content: center">
+                <a class="btn primary"><svg><use href="#icon-user" /></svg> Manage your account</a>
+                <a class="btn outline"><svg><use href="#icon-shield" /></svg> Manage users</a>
+              </div>
+            </div>
+
+            <div class="grid-products">
+              <div class="product-card brand-innoventa">
+                <span class="mark tinted"><svg><use href="#mark-innoventa" /></svg></span>
+                <div class="stack g2 grow">
+                  <span class="card-title">Innoventa</span>
+                  <span class="card-description">Forms, inventory and entries.</span>
+                </div>
+                <a class="btn outline sm">Open <svg><use href="#icon-arrow-right" /></svg></a>
+              </div>
+              <div class="product-card brand-moneta">
+                <span class="mark tinted"><svg><use href="#mark-moneta" /></svg></span>
+                <div class="stack g2 grow">
+                  <span class="card-title">Moneta</span>
+                  <span class="card-description">Personal finance, budgets and accounts.</span>
+                </div>
+                <a class="btn outline sm">Open <svg><use href="#icon-arrow-right" /></svg></a>
+              </div>
+              <div class="product-card brand-tessera">
+                <span class="mark tinted"><svg><use href="#mark-tessera" /></svg></span>
+                <div class="stack g2 grow">
+                  <span class="card-title">Tessera</span>
+                  <span class="card-description">Projects, issues, boards and sprints.</span>
+                </div>
+                <a class="btn outline sm">Open <svg><use href="#icon-arrow-right" /></svg></a>
+              </div>
+              <div class="product-card brand-kiwi">
+                <span class="mark tinted"><svg><use href="#mark-kiwi" /></svg></span>
+                <div class="stack g2 grow">
+                  <span class="card-title">Kiwi</span>
+                  <span class="card-description">The knowledge base everything files into.</span>
+                </div>
+                <a class="btn outline sm">Open <svg><use href="#icon-arrow-right" /></svg></a>
+              </div>
+              <div class="product-card brand-central">
+                <span class="mark tinted"><svg><use href="#mark-central" /></svg></span>
+                <div class="stack g2 grow">
+                  <span class="card-title">Central</span>
+                  <span class="card-description">Translations and the AI gateway.</span>
+                </div>
+                <a class="btn outline sm">Open <svg><use href="#icon-arrow-right" /></svg></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- A2 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">A2</span>
+          <div class="grow">
+            <h3>Лаунчер — пошук замість плиток</h3>
+            <p>Хаб як командна палітра: одне поле, клавіатура, «нещодавні» вгорі. З шостим продуктом сітка вже довга — список ні.</p>
+            <ul class="tags">
+              <li>ідеальний із клавіатури</li>
+              <li>масштабується до 20 продуктів</li>
+              <li>останній вхід як підказка</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <a class="btn ghost sm"><svg><use href="#icon-user" /></svg> Ivan</a>
+          </div>
+
+          <div class="pad-lg" style="background: var(--sidebar)">
+            <div class="launcher">
+              <div class="launcher-search">
+                <svg><use href="#icon-search" /></svg>
+                <input value="" placeholder="Where to?" readonly />
+                <span class="kbd">⌘K</span>
+              </div>
+
+              <div class="launcher-group">Recent</div>
+              <div class="launcher-row active brand-tessera">
+                <span class="mark sm tinted"><svg><use href="#mark-tessera" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Tessera</span>
+                  <span class="tiny muted">Projects, issues, boards and sprints</span>
+                </div>
+                <span class="tiny muted">2 hours ago</span>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+              <div class="launcher-row brand-kiwi">
+                <span class="mark sm tinted"><svg><use href="#mark-kiwi" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Kiwi</span>
+                  <span class="tiny muted">The knowledge base everything files into</span>
+                </div>
+                <span class="tiny muted">yesterday</span>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+
+              <div class="launcher-group">All applications</div>
+              <div class="launcher-row brand-innoventa">
+                <span class="mark sm tinted"><svg><use href="#mark-innoventa" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Innoventa</span>
+                  <span class="tiny muted">Forms, inventory and entries</span>
+                </div>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+              <div class="launcher-row brand-moneta">
+                <span class="mark sm tinted"><svg><use href="#mark-moneta" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Moneta</span>
+                  <span class="tiny muted">Personal finance, budgets and accounts</span>
+                </div>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+              <div class="launcher-row brand-central">
+                <span class="mark sm tinted"><svg><use href="#mark-central" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Central</span>
+                  <span class="tiny muted">Translations and the AI gateway</span>
+                </div>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+
+              <div class="launcher-group">Your account</div>
+              <div class="launcher-row">
+                <span class="mark sm soft"><svg><use href="#icon-user" /></svg></span>
+                <div class="stack grow">
+                  <span class="small" style="font-weight: 500">Account &amp; security</span>
+                  <span class="tiny muted">Password, connected clients, sessions</span>
+                </div>
+                <svg class="chev"><use href="#icon-chevron-right" /></svg>
+              </div>
+
+              <div class="launcher-foot">
+                <span class="tiny muted"><span class="kbd">↑</span> <span class="kbd">↓</span> navigate</span>
+                <span class="tiny muted"><span class="kbd">↵</span> open</span>
+                <span class="tiny muted"><span class="kbd">esc</span> close</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- A3 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">A3</span>
+          <div class="grow">
+            <h3>Спліт — акаунт ліворуч, продукти праворуч</h3>
+            <p>Identity — це не вітрина застосунків, а твій акаунт. Тут він рівноправна половина екрана, а не посилання в кутку.</p>
+            <ul class="tags">
+              <li>безпека на видноті</li>
+              <li>кольорова смуга = продукт</li>
+              <li>найкраще для «керувати собою»</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="split">
+            <div class="split-brand">
+              <div class="stack g4">
+                <div class="center g3">
+                  <span class="avatar lg">IH</span>
+                  <div class="stack" style="gap: 0.25rem">
+                    <b style="font-family: var(--font-display); font-size: 1.125rem">Ivan Hontarenko</b>
+                    <span class="tiny muted">ihontarenko@gmail.com</span>
+                  </div>
+                </div>
+
+                <div class="center g2 wrap">
+                  <span class="badge ok"><svg><use href="#icon-check" /></svg> Password is strong</span>
+                  <span class="badge outline"><svg><use href="#icon-clock" /></svg> Signed in 2h ago</span>
+                </div>
+
+                <p class="small muted" style="max-width: 22rem; line-height: 1.7">
+                  Your account is the key to every application on the right. Change it here and it changes
+                  everywhere — there is nowhere else to change it.
+                </p>
+              </div>
+
+              <div class="center g2 wrap">
+                <a class="btn primary sm"><svg><use href="#icon-user" /></svg> Account</a>
+                <a class="btn outline sm"><svg><use href="#icon-shield" /></svg> Users</a>
+                <a class="btn ghost sm"><svg><use href="#icon-logout" /></svg> Sign out</a>
+              </div>
+            </div>
+
+            <div class="stack g3" style="padding: 2rem">
+              <span class="tiny muted" style="text-transform: uppercase; letter-spacing: 0.08em">Continue to</span>
+
+              <div class="rail-row brand-innoventa">
+                <span class="mark tinted"><svg><use href="#mark-innoventa" /></svg></span>
+                <div class="stack grow" style="gap: 0.125rem">
+                  <b class="small">Innoventa</b>
+                  <span class="tiny muted">Forms, inventory and entries</span>
+                </div>
+                <svg style="width: 1rem; height: 1rem; color: var(--ink-4)"><use href="#icon-arrow-right" /></svg>
+              </div>
+              <div class="rail-row brand-moneta">
+                <span class="mark tinted"><svg><use href="#mark-moneta" /></svg></span>
+                <div class="stack grow" style="gap: 0.125rem">
+                  <b class="small">Moneta</b>
+                  <span class="tiny muted">Personal finance</span>
+                </div>
+                <svg style="width: 1rem; height: 1rem; color: var(--ink-4)"><use href="#icon-arrow-right" /></svg>
+              </div>
+              <div class="rail-row brand-tessera">
+                <span class="mark tinted"><svg><use href="#mark-tessera" /></svg></span>
+                <div class="stack grow" style="gap: 0.125rem">
+                  <b class="small">Tessera</b>
+                  <span class="tiny muted">Projects and issues</span>
+                </div>
+                <svg style="width: 1rem; height: 1rem; color: var(--ink-4)"><use href="#icon-arrow-right" /></svg>
+              </div>
+              <div class="rail-row brand-kiwi">
+                <span class="mark tinted"><svg><use href="#mark-kiwi" /></svg></span>
+                <div class="stack grow" style="gap: 0.125rem">
+                  <b class="small">Kiwi</b>
+                  <span class="tiny muted">Knowledge base</span>
+                </div>
+                <svg style="width: 1rem; height: 1rem; color: var(--ink-4)"><use href="#icon-arrow-right" /></svg>
+              </div>
+              <div class="rail-row brand-central">
+                <span class="mark tinted"><svg><use href="#mark-central" /></svg></span>
+                <div class="stack grow" style="gap: 0.125rem">
+                  <b class="small">Central</b>
+                  <span class="tiny muted">Translations and AI</span>
+                </div>
+                <svg style="width: 1rem; height: 1rem; color: var(--ink-4)"><use href="#icon-arrow-right" /></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- A4 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">A4</span>
+          <div class="grow">
+            <h3>Бенто — плитки різного розміру</h3>
+            <p>Той продукт, у якому ти був щойно, займає чверть екрана. Решта — рівні між собою. Хаб перестає бути таблицею.</p>
+            <ul class="tags">
+              <li>«останній» видно з порога</li>
+              <li>місце під статус і безпеку</li>
+              <li>найживіший вигляд</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <a class="btn ghost sm"><svg><use href="#icon-user" /></svg> Ivan</a>
+          </div>
+
+          <div class="pad">
+            <div class="between" style="margin-bottom: 1.25rem">
+              <div class="stack" style="gap: 0.25rem">
+                <h2 style="font-size: 1.375rem">Good evening, Ivan</h2>
+                <span class="small muted">Five applications, one account.</span>
+              </div>
+              <a class="btn outline sm"><svg><use href="#icon-shield" /></svg> Users</a>
+            </div>
+
+            <div class="bento">
+              <div class="feature brand-tessera">
+                <div class="between">
+                  <span class="mark lg tinted"><svg><use href="#mark-tessera" /></svg></span>
+                  <span class="badge outline"><svg><use href="#icon-clock" /></svg> 2h ago</span>
+                </div>
+                <div class="stack g3">
+                  <div class="stack" style="gap: 0.25rem">
+                    <h3 style="font-size: 1.25rem">Tessera</h3>
+                    <span class="small muted">Projects, issues, boards and sprints — where the work is written down.</span>
+                  </div>
+                  <a class="btn brand sm" style="align-self: flex-start">Continue <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+
+              <div class="brand-innoventa">
+                <span class="mark tinted"><svg><use href="#mark-innoventa" /></svg></span>
+                <div class="stack" style="gap: 0.125rem">
+                  <b class="small">Innoventa</b>
+                  <span class="tiny muted">Forms &amp; inventory</span>
+                </div>
+              </div>
+
+              <div class="brand-moneta">
+                <span class="mark tinted"><svg><use href="#mark-moneta" /></svg></span>
+                <div class="stack" style="gap: 0.125rem">
+                  <b class="small">Moneta</b>
+                  <span class="tiny muted">Finance</span>
+                </div>
+              </div>
+
+              <div class="brand-kiwi">
+                <span class="mark tinted"><svg><use href="#mark-kiwi" /></svg></span>
+                <div class="stack" style="gap: 0.125rem">
+                  <b class="small">Kiwi</b>
+                  <span class="tiny muted">Knowledge base</span>
+                </div>
+              </div>
+
+              <div class="brand-central">
+                <span class="mark tinted"><svg><use href="#mark-central" /></svg></span>
+                <div class="stack" style="gap: 0.125rem">
+                  <b class="small">Central</b>
+                  <span class="tiny muted">Translations &amp; AI</span>
+                </div>
+              </div>
+
+              <div class="wide">
+                <div class="between">
+                  <div class="center g3">
+                    <span class="avatar">IH</span>
+                    <div class="stack" style="gap: 0.125rem">
+                      <b class="small">Your account</b>
+                      <span class="tiny muted">ihontarenko@gmail.com</span>
+                    </div>
+                  </div>
+                  <a class="btn outline sm">Manage <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+                <div class="center g2 wrap" style="margin-top: 0.75rem">
+                  <span class="badge ok"><svg><use href="#icon-check" /></svg> 2 connected clients</span>
+                  <span class="badge outline"><svg><use href="#icon-lock" /></svg> Password set 41 days ago</span>
+                </div>
+              </div>
+
+              <div class="wide">
+                <div class="between">
+                  <b class="small">Recent sign-ins</b>
+                  <a class="tiny muted" style="text-decoration: none">See all</a>
+                </div>
+                <div class="stack g2">
+                  <div class="between tiny"><span class="muted">Chrome · Windows</span><span class="mono muted">2h ago</span></div>
+                  <div class="between tiny"><span class="muted">Claude Code · MCP client</span><span class="mono muted">yesterday</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- A5 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">A5</span>
+          <div class="grow">
+            <h3>Перепустки — квиток на кожен продукт</h3>
+            <p>Tessera латиною — жетон, яким у Римі проходили. Тут хаб і є пачкою жетонів: корінець із кодом, перфорація, вхід.</p>
+            <ul class="tags">
+              <li>єдиний макет із власним характером</li>
+              <li>код продукту = префікс тікетів</li>
+              <li>найризикованіший</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <a class="btn ghost sm"><svg><use href="#icon-logout" /></svg> Sign out</a>
+          </div>
+
+          <div class="pad">
+            <div class="stack g2" style="margin-bottom: 1.5rem">
+              <div class="center g3">
+                <span class="avatar">IH</span>
+                <div class="stack" style="gap: 0.125rem">
+                  <b style="font-family: var(--font-display); font-size: 1.0625rem">Ivan Hontarenko</b>
+                  <span class="tiny muted">Your pass is valid for all five. Pick one.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stack g3">
+              <div class="pass brand-innoventa">
+                <div class="pass-stub">
+                  <svg style="width: 1.375rem; height: 1.375rem"><use href="#mark-innoventa" /></svg>
+                  <span class="code">INVT</span>
+                </div>
+                <div class="pass-body">
+                  <div class="stack" style="gap: 0.1875rem">
+                    <b class="small">Innoventa</b>
+                    <span class="tiny muted">Forms, inventory and entries · localhost:5010</span>
+                  </div>
+                  <a class="btn outline sm">Enter <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+
+              <div class="pass brand-moneta">
+                <div class="pass-stub">
+                  <svg style="width: 1.375rem; height: 1.375rem"><use href="#mark-moneta" /></svg>
+                  <span class="code">MNT</span>
+                </div>
+                <div class="pass-body">
+                  <div class="stack" style="gap: 0.1875rem">
+                    <b class="small">Moneta</b>
+                    <span class="tiny muted">Personal finance · localhost:5020</span>
+                  </div>
+                  <a class="btn outline sm">Enter <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+
+              <div class="pass brand-tessera">
+                <div class="pass-stub">
+                  <svg style="width: 1.375rem; height: 1.375rem"><use href="#mark-tessera" /></svg>
+                  <span class="code">TSSR</span>
+                </div>
+                <div class="pass-body">
+                  <div class="stack" style="gap: 0.1875rem">
+                    <b class="small">Tessera</b>
+                    <span class="tiny muted">Projects and issues · localhost:5050</span>
+                  </div>
+                  <a class="btn outline sm">Enter <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+
+              <div class="pass brand-kiwi">
+                <div class="pass-stub">
+                  <svg style="width: 1.375rem; height: 1.375rem"><use href="#mark-kiwi" /></svg>
+                  <span class="code">KW</span>
+                </div>
+                <div class="pass-body">
+                  <div class="stack" style="gap: 0.1875rem">
+                    <b class="small">Kiwi</b>
+                    <span class="tiny muted">Knowledge base · localhost:5070</span>
+                  </div>
+                  <a class="btn outline sm">Enter <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+
+              <div class="pass brand-central">
+                <div class="pass-stub">
+                  <svg style="width: 1.375rem; height: 1.375rem"><use href="#mark-central" /></svg>
+                  <span class="code">CNTR</span>
+                </div>
+                <div class="pass-body">
+                  <div class="stack" style="gap: 0.1875rem">
+                    <b class="small">Central</b>
+                    <span class="tiny muted">Translations and the AI gateway · localhost:9095</span>
+                  </div>
+                  <a class="btn outline sm">Enter <svg><use href="#icon-arrow-right" /></svg></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ================================================================================
+           B. ВХІД
+           ================================================================================ -->
+
+      <div class="section-head" id="login">
+        <h2>B · Сторінка авторизації</h2>
+        <span>перше, що бачить людина — і єдине місце, де вводиться пароль</span>
+      </div>
+
+      <!-- B1 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">B1</span>
+          <div class="grow">
+            <h3>Картка, доведена до ладу</h3>
+            <p>Те саме, що зараз, але з маркою, «забули пароль», іконками в полях і соцвходом угорі — де на нього справді тиснуть.</p>
+            <ul class="tags">
+              <li>година роботи</li>
+              <li>нічого не ламає</li>
+              <li>соцвхід перший</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+          </div>
+
+          <div class="pad-lg" style="display: grid; place-items: center; background: var(--sidebar)">
+            <div style="width: 100%; max-width: 23rem">
+              <div class="card stack g4">
+                <div class="stack g3" style="align-items: center; text-align: center">
+                  <span class="mark lg"><svg><use href="#mark-identity" /></svg></span>
+                  <div class="stack" style="gap: 0.25rem">
+                    <span class="card-title" style="font-size: 1.125rem">Welcome back</span>
+                    <span class="card-description">Sign in to Identity — and to everything it opens.</span>
+                  </div>
+                </div>
+
+                <div class="stack g2">
+                  <a class="btn outline block"><svg><use href="#icon-google" /></svg> Continue with Google</a>
+                  <a class="btn outline block"><svg><use href="#icon-github" /></svg> Continue with GitHub</a>
+                </div>
+
+                <div class="sep"><span>or with your email</span></div>
+
+                <div class="stack g3">
+                  <div class="field">
+                    <label>Email</label>
+                    <div class="input filled"><svg><use href="#icon-mail" /></svg> ihontarenko@gmail.com</div>
+                  </div>
+                  <div class="field">
+                    <div class="row">
+                      <label>Password</label>
+                      <a>Forgot?</a>
+                    </div>
+                    <div class="input focused filled">
+                      <svg><use href="#icon-lock" /></svg>
+                      <span class="dots grow">••••••••••</span>
+                      <svg><use href="#icon-eye" /></svg>
+                    </div>
+                  </div>
+                  <a class="btn primary block">Sign in</a>
+                </div>
+              </div>
+
+              <p class="tiny muted" style="text-align: center; margin-top: 1rem">Back to Identity</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- B2 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">B2</span>
+          <div class="grow">
+            <h3>Спліт — бренд ліворуч, форма праворуч</h3>
+            <p>Ліва половина відповідає на питання «а це взагалі що?»: п’ять марок і один рядок про те, що вхід один на всіх.</p>
+            <ul class="tags">
+              <li>найпредставніший</li>
+              <li>ліва частина зникає на телефоні</li>
+              <li>світіння з --primary теми</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login</span></div>
+
+          <div class="split">
+            <div class="split-brand">
+              <div class="brandline">
+                <span class="mark"><svg><use href="#mark-identity" /></svg></span>
+                <b style="font-size: 1.25rem">Identity</b>
+              </div>
+
+              <div class="stack g4">
+                <h2 style="font-size: 1.75rem; line-height: 1.25; max-width: 18rem">
+                  One account.<br />Five applications.<br />No second password.
+                </h2>
+                <p class="small muted" style="max-width: 22rem; line-height: 1.7">
+                  Identity mints the token every other product trusts. Sign in here and Innoventa, Moneta,
+                  Central, Tessera and Kiwi already know who you are.
+                </p>
+              </div>
+
+              <div class="center g3">
+                <span class="mark sm tinted brand-innoventa"><svg><use href="#mark-innoventa" /></svg></span>
+                <span class="mark sm tinted brand-moneta"><svg><use href="#mark-moneta" /></svg></span>
+                <span class="mark sm tinted brand-central"><svg><use href="#mark-central" /></svg></span>
+                <span class="mark sm tinted brand-tessera"><svg><use href="#mark-tessera" /></svg></span>
+                <span class="mark sm tinted brand-kiwi"><svg><use href="#mark-kiwi" /></svg></span>
+              </div>
+            </div>
+
+            <div class="split-form">
+              <div class="stack g4" style="width: 100%; max-width: 20rem">
+                <div class="stack" style="gap: 0.25rem">
+                  <h3 style="font-size: 1.25rem">Sign in</h3>
+                  <span class="small muted">Welcome back.</span>
+                </div>
+
+                <div class="stack g3">
+                  <div class="field">
+                    <label>Email</label>
+                    <div class="input filled lg"><svg><use href="#icon-mail" /></svg> ihontarenko@gmail.com</div>
+                  </div>
+                  <div class="field">
+                    <div class="row">
+                      <label>Password</label>
+                      <a>Forgot?</a>
+                    </div>
+                    <div class="input lg"><svg><use href="#icon-lock" /></svg> <span class="grow">Your password</span></div>
+                  </div>
+                  <a class="btn primary lg block">Sign in</a>
+                </div>
+
+                <div class="sep"><span>or continue with</span></div>
+
+                <div class="center g2">
+                  <a class="btn outline grow"><svg><use href="#icon-google" /></svg> Google</a>
+                  <a class="btn outline grow"><svg><use href="#icon-github" /></svg> GitHub</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- B3 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">B3</span>
+          <div class="grow">
+            <h3>Без картки — форма просто на тлі</h3>
+            <p>Картка на порожньому екрані нічого не відділяє. Прибираємо її: великий заголовок, поля з однією лінією знизу, і все.</p>
+            <ul class="tags">
+              <li>найтихіший</li>
+              <li>Space Grotesk у повний зріст</li>
+              <li>найменше пікселів</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <span class="tiny muted">Need an account? Ask an administrator.</span>
+          </div>
+
+          <div class="pad-lg" style="display: grid; place-items: center">
+            <div class="stack g6" style="width: 100%; max-width: 21rem">
+              <div class="stack g2">
+                <h2 style="font-size: 2.25rem; line-height: 1.1">Sign&nbsp;in.</h2>
+                <p class="small muted">One account for Innoventa, Moneta, Central, Tessera and Kiwi.</p>
+              </div>
+
+              <div class="stack g4">
+                <div class="field">
+                  <label class="tiny muted">Email</label>
+                  <div class="input flat filled">ihontarenko@gmail.com</div>
+                </div>
+                <div class="field">
+                  <label class="tiny muted">Password</label>
+                  <div class="input flat filled"><span class="dots grow">••••••••••</span><svg><use href="#icon-eye" /></svg></div>
+                </div>
+              </div>
+
+              <div class="stack g3">
+                <a class="btn primary lg block">Continue <svg><use href="#icon-arrow-right" /></svg></a>
+                <div class="between">
+                  <a class="tiny muted" style="text-decoration: none">Forgot your password?</a>
+                  <div class="center g3">
+                    <a class="tiny muted center g2" style="text-decoration: none"><svg style="width: 0.875rem; height: 0.875rem"><use href="#icon-google" /></svg> Google</a>
+                    <a class="tiny muted center g2" style="text-decoration: none"><svg style="width: 0.875rem; height: 0.875rem"><use href="#icon-github" /></svg> GitHub</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- B4 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">B4</span>
+          <div class="grow">
+            <h3>Два кроки — спершу пошта, потім пароль</h3>
+            <p>Показано другий крок. Пошта вже стала чіпом угорі, з неї можна повернутися. Внизу — рядок, який чесно каже, чому «невірна пошта» не буває.</p>
+            <ul class="tags">
+              <li>готує ґрунт під SSO і passkey</li>
+              <li>не зливає, чи існує акаунт</li>
+              <li>дорожчий у реалізації</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <div class="steps"><i class="on"></i><i class="on"></i></div>
+          </div>
+
+          <div class="pad-lg" style="display: grid; place-items: center; background: var(--sidebar)">
+            <div style="width: 100%; max-width: 22rem">
+              <div class="card stack g4">
+                <div class="center g2">
+                  <a class="btn ghost sm" style="padding: 0; height: auto"><svg><use href="#icon-arrow-left" /></svg></a>
+                  <span class="badge outline" style="padding: 0.25rem 0.625rem">
+                    <span class="avatar" style="width: 1.125rem; height: 1.125rem; font-size: 0.5625rem">IH</span>
+                    ihontarenko@gmail.com
+                  </span>
+                </div>
+
+                <div class="stack" style="gap: 0.25rem">
+                  <span class="card-title" style="font-size: 1.125rem">Enter your password</span>
+                  <span class="card-description">Step 2 of 2.</span>
+                </div>
+
+                <div class="stack g3">
+                  <div class="field">
+                    <div class="input focused filled">
+                      <svg><use href="#icon-lock" /></svg>
+                      <span class="dots grow">••••••••</span>
+                      <svg><use href="#icon-eye" /></svg>
+                    </div>
+                  </div>
+                  <a class="btn primary block">Sign in</a>
+                  <a class="btn ghost block">Use Google instead</a>
+                </div>
+
+                <p class="tiny muted" style="line-height: 1.6; border-top: 1px solid var(--border); padding-top: 0.875rem">
+                  We never say whether an address has an account here — a wrong password and an unknown
+                  address answer the same way, on purpose.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- B5 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">B5</span>
+          <div class="grow">
+            <h3>Вхід у контексті продукту</h3>
+            <p>Найчастіший шлях сюди — редірект із Tessera чи Kiwi. Тоді сторінка має сказати, звідки тебе прислали й куди повернуть.</p>
+            <ul class="tags">
+              <li>вирішує реальну плутанину</li>
+              <li>показує, що дістане продукт</li>
+              <li>той самий екран без продукту = B1</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login?client_id=tessera</span></div>
+
+          <div class="appbar">
+            <div class="brandline">
+              <span class="mark sm"><svg><use href="#mark-identity" /></svg></span>
+              <b>Identity</b>
+            </div>
+            <span class="badge outline"><svg><use href="#icon-lock" /></svg> Secure sign-in</span>
+          </div>
+
+          <div class="pad-lg" style="display: grid; place-items: center; background: var(--sidebar)">
+            <div style="width: 100%; max-width: 24rem">
+              <div class="card stack g4 brand-tessera">
+                <div class="stack g3" style="align-items: center; text-align: center">
+                  <div class="handoff">
+                    <span class="mark soft"><svg><use href="#mark-identity" /></svg></span>
+                    <span class="line"></span>
+                    <span class="mark solid-brand"><svg><use href="#mark-tessera" /></svg></span>
+                  </div>
+                  <div class="stack" style="gap: 0.25rem">
+                    <span class="card-title" style="font-size: 1.0625rem">Sign in to continue to Tessera</span>
+                    <span class="card-description">Identity is where the password lives. Tessera never sees it.</span>
+                  </div>
+                </div>
+
+                <ul class="scopes">
+                  <li><svg><use href="#icon-check" /></svg> Tessera will learn your name and email</li>
+                  <li><svg><use href="#icon-check" /></svg> …and the projects you are a member of</li>
+                  <li><svg><use href="#icon-check" /></svg> You can disconnect it any time on your account page</li>
+                </ul>
+
+                <div class="stack g3" style="border-top: 1px solid var(--border); padding-top: 1rem">
+                  <div class="field">
+                    <label>Email</label>
+                    <div class="input filled"><svg><use href="#icon-mail" /></svg> ihontarenko@gmail.com</div>
+                  </div>
+                  <div class="field">
+                    <div class="row">
+                      <label>Password</label>
+                      <a>Forgot?</a>
+                    </div>
+                    <div class="input"><svg><use href="#icon-lock" /></svg> <span class="grow">Your password</span></div>
+                  </div>
+                  <a class="btn brand block">Sign in and continue</a>
+                  <div class="center g2">
+                    <a class="btn outline grow sm"><svg><use href="#icon-google" /></svg> Google</a>
+                    <a class="btn outline grow sm"><svg><use href="#icon-github" /></svg> GitHub</a>
+                  </div>
+                </div>
+
+                <p class="tiny muted mono" style="text-align: center">→ localhost:5050/login/oauth2/code/identity</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ================================================================================ -->
+
+      <section class="notes card" id="notes">
+        <h2 style="font-size: 1.125rem">Що я б узяв — і чому</h2>
+        <ul>
+          <li>
+            <strong>Хаб: A3 (спліт) як основа, з бенто-плиткою «останній продукт» з A4.</strong> Identity —
+            це акаунт, а не вітрина; спліт єдиний із п’яти каже це будовою, а не текстом. A1 — безпечний
+            запасний варіант на пів години роботи.
+          </li>
+          <li>
+            <strong>Вхід: B5, який без параметра <span class="mono">client_id</span> вироджується в B1.</strong>
+            Це не два дизайни, а один із двома станами — і саме той стан, у якому сюди приходять частіше за
+            все, зараз не обслуговується взагалі.
+          </li>
+          <li>
+            <strong>B2 варто взяти цілком, якщо колись буде публічна сторінка.</strong> Зараз ліва половина —
+            це реклама самому собі: інших користувачів, крім тебе, тут поки що немає.
+          </li>
+          <li>
+            <strong>A5 (перепустки) — гарний, і я б його не брав першим.</strong> Він єдиний, що не схожий на
+            решту родини, а Identity — це найменш підходяще місце для експерименту з формою.
+          </li>
+          <li>
+            <strong>Одне зауваження поза макетами:</strong> реальна
+            <span class="mono">LandingPage.tsx</span> показує чотири продукти, а їх шість. Kiwi і Tessera
+            додані тут скрізь — це виправлення варте окремого тікета незалежно від того, який макет виграє.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script>
+      // Перемикач теми — той самий механізм, що в ThemeContext: клас на <html>, і більше нічого.
+      const swatchButtons = document.querySelectorAll("#swatches .swatch");
+
+      swatchButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const theme = button.dataset.theme;
+
+          document.documentElement.className = theme;
+
+          swatchButtons.forEach((other) => {
+            other.setAttribute("aria-pressed", String(other === button));
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button"
 import { SeasonalEffect } from "@/components/layout/SeasonalEffect"
 import { useAuth } from "@/context/AuthContext"
 
-// Minimal flat-header shell for the two anonymous-entry-point pages (/ and /login) — a login screen
-// or a public landing hub doesn't belong inside the authenticated app's sidebar (see
-// ApplicationLayout for that shell instead). Kept close to Identity's previous single-layout header
-// bar, just trimmed to what a public page actually needs (brand + one sign-in/account link) — no
-// nav links to authenticated-only pages, no appearance switcher.
+// Minimal flat-header shell for a page that belongs to neither the authenticated app's sidebar (see
+// ApplicationLayout) nor the full-bleed auth screens (see AuthShell). Kept close to Identity's
+// previous single-layout header bar, just trimmed to what a public page actually needs (brand + one
+// sign-in/account link) — no nav links to authenticated-only pages, no appearance switcher.
+//
+// ⚠️ ONE PAGE USES THIS NOW — the forced password change. `/` and `/login` moved out when they became
+// ports of Innoventa's AuthShell, which is a full-screen grid and paints its own background: a header
+// bar above it pushes the fold and cuts the brand panel. Kept rather than folded into that screen
+// because the next page that is neither app nor auth wants exactly this frame.
 export function PublicLayout() {
   const { user } = useAuth()
 

@@ -32,10 +32,10 @@ export function ApplicationRoutes() {
 
   return (
     <Routes>
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
+      {/* ⚠️ Outside PublicLayout, and that is the point of the port. AuthShell is `min-h-svh` and paints
+          its own background — a header bar above it would push the fold and cut the brand panel in half. */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route element={<ApplicationLayout />}>
         <Route
           path="/account"

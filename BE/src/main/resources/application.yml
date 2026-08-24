@@ -190,16 +190,40 @@ identity:
     owner: ${IDENTITY_BOOTSTRAP_OWNER:ihontarenko@gmail.com}
 
   clients:
-    # Confidential client — Innoventa hasn't migrated onto this service yet, so this entry is
-    # provisional. Left exactly as-is (secret + HTTP Basic, no PKCE) when moneta below
-    # was reconfigured as a public client — do not change this one without being asked.
+    # Public client — Innoventa's INTERFACE, and ⚠️ **this entry was deliberately left alone until now.**
+    #
+    # It read: *"Innoventa hasn't migrated onto this service yet, so this entry is provisional. Left
+    # exactly as-is (secret + HTTP Basic, no PKCE) when moneta was reconfigured as a public client — do
+    # not change this one without being asked."* Ivan asked, on 2026-08-20, choosing the `innoventa`
+    # client for Innoventa's browser-side flow to Kiwi (INVT-0097). So the note is honoured by being
+    # quoted rather than deleted.
+    #
+    # ⚠️ AND INNOVENTA STILL HAS NOT MIGRATED, which is the part not to misread. Its backend mints its
+    # own token pair at /api/auth/* and registers only google and github; **nothing here signs anybody
+    # into Innoventa.** What this client exists for is narrow: the SPA runs a SECOND OIDC flow, purely so
+    # the browser holds an `aud: innoventa` token it can present to KIWI (whose accepted-audiences now
+    # lists it). Two tokens in one browser, on purpose — see INVT-0097.
+    #
+    # ⚠️ SECRET REMOVED, AND IT HAD TO BE. A browser SPA has nowhere safe to keep one, so this becomes
+    # Authorization Code + PKCE like moneta, tessera and kiwi — `requireProofKey` is enforced in
+    # SecurityConfiguration.buildRegisteredClient for a public client. `client-secret` is intentionally
+    # absent rather than blank: a public client never presents one. Nothing was using it — Innoventa's
+    # backend has no `identity` registration at all.
+    #
+    # ⚠️ THE REDIRECT PATH IS NOT THE ONE EVERY SIBLING USES, and copying theirs was silently broken.
+    # Tessera, Kiwi and Moneta all take the callback at `/login/oauth2/code/identity`. Innoventa's Vite
+    # config proxies **`/login` to Innoventa's own backend**, which owns that path for its Google and
+    # GitHub sign-ins — so a callback sent there leaves the SPA entirely and lands on a server that
+    # knows nothing about this flow. `/auth/identity/callback` is the interface's own route.
+    #
+    # ⚠️ It is matched literally by OAuth: this line and `FE/src/auth/identityAuth.ts` change together
+    # or nobody can connect at all.
     innoventa:
       client-id: ${IDENTITY_INNOVENTA_CLIENT_ID:innoventa-web}
-      client-secret: ${IDENTITY_INNOVENTA_CLIENT_SECRET:innoventa-dev-secret}
-      redirect-uris: ${IDENTITY_INNOVENTA_REDIRECT_URIS:http://localhost:5010/login/oauth2/code/identity}
+      redirect-uris: ${IDENTITY_INNOVENTA_REDIRECT_URIS:http://localhost:5010/auth/identity/callback}
       post-logout-redirect-uris: ${IDENTITY_INNOVENTA_POST_LOGOUT_REDIRECT_URIS:http://localhost:5010}
       audience: innoventa
-      public-client: false
+      public-client: true
     # Public client — the Moneta UI is a pure browser SPA with nowhere safe to keep a
     # client secret, so it authenticates via Authorization Code + PKCE instead (no secret,
     # requireProofKey enforced in SecurityConfiguration.buildRegisteredClient). client-secret is

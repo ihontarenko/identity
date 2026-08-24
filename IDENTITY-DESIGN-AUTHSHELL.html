@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="uk" class="cream">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Identity — AuthShell з нової Innoventa</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- ⚠️ Innoventa/FE роздає Onest сама, з public/fonts (щоб перший візит не малювався
+         системним фолбеком). Тут Google Fonts — це макет, а не продукт. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* =========================================================================================
+         Це порт, а не «в тому дусі». Числа взяті з коду:
+
+           AuthShell.tsx        grid lg:grid-cols-[1fr_minmax(420px,38%)] · p-10 · max-w-sm · gap-6
+           @jmouse/ui button    h-[34px] · px-3.5 · rounded-md · text-[12.5px] · font-medium
+           @jmouse/ui input     h-[34px] · rounded-md · border-input · px-2.5 · text-[12.5px]
+           @jmouse/ui label     text-[13px] · font-medium
+           @jmouse/ui styles    --radius: 0.75rem → md = calc(--radius - 2px) = 10px
+           FE/src/index.css     --font-sans / --font-display: "Onest" (одна гарнітура, через кирилицю)
+           themes.css           палітри — ті самі, що в Identity/UI/src/index.css
+         ========================================================================================= */
+
+      :root {
+        --font-sans: "Onest", system-ui, sans-serif;
+        --font-display: "Onest", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", "Courier New", monospace;
+
+        --radius: 0.75rem;
+        --radius-sm: calc(var(--radius) - 4px);
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+
+        --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+
+      .cream {
+        --background: #fbf8f2; --foreground: #2a2a29;
+        --card: #fffefa; --card-foreground: #2a2a29;
+        --primary: #1e78a4; --primary-foreground: #fbf8f2;
+        --secondary: #faf6ec; --secondary-foreground: #4d4d4c;
+        --muted: #faf6ec; --muted-foreground: #7c7b78;
+        --accent: #e2eef4; --accent-foreground: #155778;
+        --destructive: #b3261e;
+        --border: #e7e1d1; --input: #dcd4bf; --ring: #1e78a4;
+        --sidebar: #f4efe4; --ink-4: #a9a7a2;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .sage {
+        --background: #f5f4ef; --foreground: #1c2420;
+        --card: #fafaf6; --card-foreground: #1c2420;
+        --primary: #2e7d52; --primary-foreground: #f5f4ef;
+        --secondary: #f0efe8; --secondary-foreground: #394740;
+        --muted: #f0efe8; --muted-foreground: #6b7a70;
+        --accent: #d6efdf; --accent-foreground: #1a5a39;
+        --destructive: #b3261e;
+        --border: #d8d5c8; --input: #c8c4b4; --ring: #2e7d52;
+        --sidebar: #eceae1; --ink-4: #9daaa0;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .rose {
+        --background: #fbf3f5; --foreground: #28141c;
+        --card: #fef8fa; --card-foreground: #28141c;
+        --primary: #c62060; --primary-foreground: #fbf3f5;
+        --secondary: #f8ecef; --secondary-foreground: #522838;
+        --muted: #f8ecef; --muted-foreground: #845060;
+        --accent: #fcdde9; --accent-foreground: #900040;
+        --destructive: #b3261e;
+        --border: #e4c8d0; --input: #d4b0bb; --ring: #c62060;
+        --sidebar: #f4e4e8; --ink-4: #b48090;
+        --warning: #b5832b; --success: #2e7d52;
+      }
+
+      .midnight {
+        --background: #14181e; --foreground: #e8eef4;
+        --card: #252e3a; --card-foreground: #e8eef4;
+        --primary: #40d080; --primary-foreground: #14181e;
+        --secondary: #2d3846; --secondary-foreground: #c0ccd8;
+        --muted: #2d3846; --muted-foreground: #8090a4;
+        --accent: #0e3020; --accent-foreground: #80f0b8;
+        --destructive: #8c2c2c;
+        --border: #2e3848; --input: #3c4858; --ring: #40d080;
+        --sidebar: #1e242c; --ink-4: #505e70;
+        --warning: #8c6c1c; --success: #2a6e48;
+      }
+
+      .dracula {
+        --background: #282a36; --foreground: #f8f8f2;
+        --card: #383a58; --card-foreground: #f8f8f2;
+        --primary: #bd93f9; --primary-foreground: #282a36;
+        --secondary: #414364; --secondary-foreground: #c0c0d0;
+        --muted: #414364; --muted-foreground: #7484bc;
+        --accent: #1e1030; --accent-foreground: #ddb8ff;
+        --destructive: #884040;
+        --border: #4a4d68; --input: #5a5e7c; --ring: #bd93f9;
+        --sidebar: #2f3146; --ink-4: #5c6498;
+        --warning: #886018; --success: #30704a;
+      }
+
+      .one-dark {
+        --background: #21252b; --foreground: #abb2bf;
+        --card: #31363f; --card-foreground: #abb2bf;
+        --primary: #61afef; --primary-foreground: #21252b;
+        --secondary: #3a3f49; --secondary-foreground: #808898;
+        --muted: #3a3f49; --muted-foreground: #70787e;
+        --accent: #102030; --accent-foreground: #90ccff;
+        --destructive: #784048;
+        --border: #3e4451; --input: #4a5060; --ring: #61afef;
+        --sidebar: #282c34; --ink-4: #58606a;
+        --warning: #786020; --success: #2a6830;
+      }
+
+      /* ============================== каркас галереї ============================== */
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: var(--sidebar);
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3 { font-family: var(--font-display); margin: 0; letter-spacing: -0.02em; }
+      p { margin: 0; }
+
+      .topbar {
+        position: sticky; top: 0; z-index: 20;
+        display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;
+        padding: 0.875rem 1.5rem;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+      .topbar-title { margin-right: auto; display: flex; align-items: center; gap: 0.625rem; }
+      .topbar-title h1 { font-size: 1rem; font-weight: 600; }
+      .topbar-title span { font-size: 0.75rem; color: var(--muted-foreground); }
+
+      .swatches { display: flex; gap: 0.375rem; }
+      .swatch {
+        width: 1.75rem; height: 1.75rem; padding: 0;
+        border: 1px solid var(--border); border-radius: 999px;
+        display: grid; place-items: center; cursor: pointer; background: transparent;
+      }
+      .swatch i { width: 0.875rem; height: 0.875rem; border-radius: 999px; display: block; }
+      .swatch[aria-pressed="true"] { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+      .page { max-width: 78rem; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+
+      .intro { max-width: 46rem; margin-bottom: 3rem; }
+      .intro h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+      .intro p { color: var(--muted-foreground); font-size: 0.9375rem; line-height: 1.7; }
+      .intro p + p { margin-top: 0.75rem; }
+      .intro code { font-family: var(--font-mono); font-size: 0.8125rem; }
+
+      .mock { margin-bottom: 3.5rem; }
+      .mock-head { display: flex; align-items: flex-start; gap: 0.875rem; margin-bottom: 0.875rem; }
+      .mock-index {
+        flex: none; width: 2.25rem; height: 2.25rem;
+        display: grid; place-items: center;
+        font-family: var(--font-mono); font-size: 0.75rem;
+        border-radius: var(--radius-md);
+        background: var(--primary); color: var(--primary-foreground);
+      }
+      .mock-head h3 { font-size: 1.0625rem; font-weight: 600; }
+      .mock-head p { font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.1875rem; }
+      .tags { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem; padding: 0; }
+      .tags li {
+        list-style: none; font-size: 0.6875rem;
+        padding: 0.125rem 0.5rem; border-radius: 999px;
+        background: var(--accent); color: var(--accent-foreground);
+      }
+
+      .screen {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 28px -12px rgb(0 0 0 / 0.12);
+      }
+      .chrome {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--sidebar);
+        border-bottom: 1px solid var(--border);
+      }
+      .chrome i { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--ink-4); opacity: 0.5; }
+      .chrome span {
+        margin-left: 0.5rem;
+        font-family: var(--font-mono); font-size: 0.6875rem;
+        color: var(--muted-foreground);
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 999px; padding: 0.125rem 0.625rem;
+      }
+
+      /* ============================== сам AuthShell ==============================
+         AuthShell.tsx:
+           <div className="grid min-h-svh bg-background lg:grid-cols-[1fr_minmax(420px,38%)]">
+         Тут min-height замість min-h-svh — макет живе всередині сторінки, а не у вікні. */
+
+      .authshell {
+        display: grid;
+        grid-template-columns: 1fr minmax(420px, 38%);
+        min-height: 41rem;
+        background: var(--background);
+        color: var(--foreground);
+      }
+
+      .brand-panel {
+        position: relative;
+        display: flex; flex-direction: column; justify-content: space-between;
+        overflow: hidden;
+        padding: 2.5rem;
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+      /* Дві м’які плями замість картинки — нічого не вантажиться, і воно бере колір теми. */
+      .brand-panel::before {
+        content: "";
+        position: absolute; inset: 0;
+        pointer-events: none;
+        opacity: 0.3;
+        background:
+          radial-gradient(60% 50% at 15% 10%, white, transparent),
+          radial-gradient(50% 40% at 85% 90%, white, transparent);
+      }
+      .brand-panel > * { position: relative; }
+
+      .brand-lockup { display: flex; align-items: center; gap: 0.625rem; }
+      .brand-lockup svg { width: 2.25rem; height: 2.25rem; }
+      .brand-lockup span { font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; letter-spacing: -0.02em; }
+
+      .brand-middle { display: flex; flex-direction: column; gap: 1.5rem; }
+      .brand-promise {
+        font-family: var(--font-display);
+        font-size: 1.875rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.03em;
+      }
+      .brand-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; font-size: 0.875rem; opacity: 0.9; }
+      .brand-list li { display: flex; align-items: flex-start; gap: 0.625rem; }
+      .brand-list li span { flex: none; margin-top: 0.125rem; }
+      .brand-foot { font-size: 0.75rem; opacity: 0.7; }
+
+      .form-col { display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+      .form-inner { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 24rem; }
+      .form-inner.wide { max-width: 28rem; }
+
+      .head { display: flex; flex-direction: column; gap: 0.25rem; }
+      .head h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+      .head p { font-size: 0.875rem; color: var(--muted-foreground); }
+
+      form, .form { display: flex; flex-direction: column; gap: 1rem; }
+      .field { display: flex; flex-direction: column; gap: 0.5rem; }
+      .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+
+      .label { font-size: 0.8125rem; font-weight: 500; line-height: 1; }
+      .link-xs { font-size: 0.75rem; color: var(--muted-foreground); text-decoration: none; }
+
+      .input {
+        display: flex; align-items: center;
+        height: 34px; width: 100%;
+        padding: 0.25rem 0.625rem;
+        font-size: 12.5px;
+        border: 1px solid var(--input);
+        border-radius: var(--radius-md);
+        background: transparent;
+        box-shadow: var(--shadow-xs);
+        color: var(--foreground);
+      }
+      .input.placeholder { color: var(--muted-foreground); }
+      .input.focused { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent); }
+      .input .dots { letter-spacing: 0.22em; }
+
+      .button {
+        display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        height: 34px;
+        padding: 0.5rem 0.875rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
+        font: 500 12.5px/1 var(--font-sans);
+        white-space: nowrap; cursor: pointer; text-decoration: none;
+        background: var(--primary); color: var(--primary-foreground);
+      }
+      .button svg { width: 1rem; height: 1rem; flex: none; }
+      .button.outline {
+        background: var(--background);
+        border-color: var(--border);
+        color: var(--foreground);
+        box-shadow: var(--shadow-xs);
+      }
+      .button.ghost { background: transparent; color: var(--foreground); }
+      .button.block { width: 100%; }
+
+      .divider { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: var(--muted-foreground); }
+      .divider span.rule { height: 1px; flex: 1; background: var(--border); }
+
+      .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+      .foot { text-align: center; font-size: 0.875rem; color: var(--muted-foreground); }
+      .foot a { color: var(--primary); text-decoration: none; }
+
+      .notice {
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--muted) 50%, transparent);
+        border-radius: var(--radius-md);
+        padding: 0.75rem;
+        font-size: 0.875rem;
+      }
+      .notice.error { border-color: color-mix(in srgb, var(--destructive) 40%, transparent); background: color-mix(in srgb, var(--destructive) 10%, transparent); color: var(--destructive); }
+
+      /* ---- картка продукту: геометрія SpaceCard з HubPage.tsx ---- */
+
+      .choice {
+        display: flex; flex-direction: column; gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        text-decoration: none; color: inherit;
+        transition: background-color 0.15s;
+      }
+      .choice:hover { background: color-mix(in srgb, var(--accent) 50%, transparent); }
+      .choice-head { display: flex; align-items: flex-start; gap: 0.625rem; }
+      .choice-head .glyph { flex: none; color: var(--brand); }
+      .choice-head .glyph svg { width: 1.125rem; height: 1.125rem; display: block; }
+      .choice-title { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; flex: 1; }
+      .choice-title b { font-size: 0.875rem; font-weight: 500; }
+      .choice-title span { font-size: 0.75rem; color: var(--muted-foreground); }
+      .choice-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; padding-top: 0.25rem; margin-top: auto; }
+      .choice-meta .stamp { font-size: 11px; color: var(--muted-foreground); }
+
+      .badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        width: fit-content;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.125rem 0.5rem;
+        font-size: 10px; font-weight: 500;
+        color: var(--foreground);
+      }
+      .badge.solid { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+
+      .row-choice {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        text-decoration: none; color: inherit;
+        transition: background-color 0.15s;
+      }
+      .row-choice:hover { background: color-mix(in srgb, var(--accent) 50%, transparent); }
+      .row-choice .glyph { flex: none; color: var(--brand); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; }
+      .row-choice .glyph svg { width: 1.125rem; height: 1.125rem; }
+      .row-choice .text { display: flex; flex-direction: column; gap: 0.0625rem; min-width: 0; flex: 1; }
+      .row-choice .text b { font-size: 0.875rem; font-weight: 500; }
+      .row-choice .text span { font-size: 0.75rem; color: var(--muted-foreground); }
+      .row-choice .chevron { width: 1rem; height: 1rem; color: var(--ink-4); flex: none; }
+
+      .group-label { font-size: 0.75rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted-foreground); }
+
+      .account-line {
+        display: flex; align-items: center; gap: 0.625rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+      }
+      .avatar {
+        width: 1.75rem; height: 1.75rem; border-radius: 999px;
+        display: grid; place-items: center;
+        background: var(--accent); color: var(--accent-foreground);
+        font-size: 0.6875rem; font-weight: 600;
+      }
+
+      .handoff { display: flex; align-items: center; gap: 0.5rem; }
+      .handoff .chip {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        border: 1px solid var(--border); border-radius: 999px;
+        padding: 0.1875rem 0.625rem; font-size: 0.75rem;
+      }
+      .handoff .chip svg { width: 0.875rem; height: 0.875rem; }
+      .handoff .arrow { width: 0.875rem; height: 0.875rem; color: var(--ink-4); }
+
+      /* Кольори продуктів — сталі: продукт не міняє колір разом із темою читача. */
+      .brand-innoventa { --brand: #1e78a4; }
+      .brand-moneta    { --brand: #2e7d52; }
+      .brand-central   { --brand: #6b3fcc; }
+      .brand-tessera   { --brand: #c05020; }
+      .brand-kiwi      { --brand: #6e9b2c; }
+
+      .notes { margin-top: 4rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; }
+      .notes h2 { font-size: 1.125rem; font-weight: 600; }
+      .notes ul { margin: 0.75rem 0 0; padding-left: 1.125rem; color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.8; }
+      .notes strong { color: var(--foreground); }
+      .notes code { font-family: var(--font-mono); font-size: 0.8125rem; }
+
+      @media (max-width: 64rem) {
+        .authshell { grid-template-columns: 1fr; }
+        .brand-panel { display: none; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="mark-identity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" />
+        <path d="M9.5 12l1.8 1.8L14.5 10" />
+      </symbol>
+      <symbol id="mark-innoventa" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="16" y1="5" x2="16" y2="16" />
+        <polyline points="4,12 16,16 28,12" />
+        <polyline points="4,17 16,21 28,17" opacity="0.8" />
+        <polyline points="4,22 16,26 28,22" opacity="0.5" />
+      </symbol>
+      <symbol id="mark-moneta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="17" r="3.2" /><circle cx="12.5" cy="13" r="4.2" /><circle cx="19" cy="7.5" r="5.2" />
+      </symbol>
+      <symbol id="mark-central" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12,8 L12,16 M8,12 L16,12 M9.2,9.2 L14.8,14.8 M14.8,9.2 L9.2,14.8" />
+      </symbol>
+      <symbol id="mark-tessera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+        <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" transform="rotate(45 12 12)" />
+      </symbol>
+      <symbol id="mark-kiwi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+        <path d="M8 8v8" /><path d="M12 8v8" /><path d="M16 8v8" />
+      </symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+      </symbol>
+      <symbol id="icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
+      </symbol>
+    </svg>
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <span style="display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 10px; background: var(--primary); color: var(--primary-foreground)">
+          <svg style="width: 1.125rem; height: 1.125rem"><use href="#mark-identity" /></svg>
+        </span>
+        <div style="display: flex; flex-direction: column">
+          <h1>Identity в оболонці Innoventa</h1>
+          <span>AuthShell один в один · вхід і вибір продукту</span>
+        </div>
+      </div>
+
+      <div class="swatches" id="swatches">
+        <button class="swatch" data-theme="cream" aria-pressed="true" title="Cream"><i style="background: #1e78a4"></i></button>
+        <button class="swatch" data-theme="sage" aria-pressed="false" title="Sage"><i style="background: #2e7d52"></i></button>
+        <button class="swatch" data-theme="rose" aria-pressed="false" title="Rose"><i style="background: #c62060"></i></button>
+        <button class="swatch" data-theme="midnight" aria-pressed="false" title="Midnight"><i style="background: #40d080"></i></button>
+        <button class="swatch" data-theme="dracula" aria-pressed="false" title="Dracula"><i style="background: #bd93f9"></i></button>
+        <button class="swatch" data-theme="one-dark" aria-pressed="false" title="One Dark"><i style="background: #61afef"></i></button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="intro">
+        <h2>Та сама оболонка, тільки Identity</h2>
+        <p>
+          Це не «в дусі» — це порт. Сітка <code>1fr / minmax(420px, 38%)</code>, бренд-панель на
+          <code>bg-primary</code> із двома радіальними плямами на 30&nbsp;%, права колонка
+          <code>max-w-sm</code> із кроком <code>gap-6</code>, кнопки й поля рівно
+          <code>34px</code> заввишки з текстом <code>12.5px</code> — усе з
+          <code>AuthShell.tsx</code> і примітивів <code>@jmouse/ui</code>. Гарнітура —
+          <b>Onest</b>, та сама, якою FE малює все й яка єдина з трьох попередніх тягне кирилицю.
+        </p>
+        <p>
+          Змінився тільки текст на панелі: обіцянка Innoventa про інвентар нічого не каже про сервіс,
+          який видає токени. Решта — геометрія — недоторкана.
+        </p>
+      </section>
+
+      <!-- 01 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">01</span>
+          <div style="flex: 1">
+            <h3>Вхід — один в один</h3>
+            <p>Той самий екран, що <code>SignInPage.tsx</code>: пошта, пароль із «Sign in without one», роздільник, Google і GitHub у два стовпці.</p>
+            <ul class="tags">
+              <li>порт без відхилень</li>
+              <li>Onest</li>
+              <li>панель зникає нижче lg</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login</span></div>
+
+          <div class="authshell">
+            <div class="brand-panel">
+              <a class="brand-lockup">
+                <svg><use href="#mark-identity" /></svg>
+                <span>Identity</span>
+              </a>
+
+              <div class="brand-middle">
+                <p class="brand-promise">One account for<br />everything you build.</p>
+                <ul class="brand-list">
+                  <li><span aria-hidden="true">✓</span> Innoventa, Moneta, Central, Tessera, Kiwi — one sign-in</li>
+                  <li><span aria-hidden="true">✓</span> Google, GitHub, or a password of your own</li>
+                  <li><span aria-hidden="true">✓</span> Every connected client revocable from one page</li>
+                </ul>
+              </div>
+
+              <p class="brand-foot">Identity issues the tokens. Nothing else does.</p>
+            </div>
+
+            <div class="form-col">
+              <div class="form-inner">
+                <div class="head">
+                  <h2>Sign in</h2>
+                  <p>Identity — one account, every application.</p>
+                </div>
+
+                <div class="form">
+                  <div class="field">
+                    <label class="label">Email</label>
+                    <div class="input">ihontarenko@gmail.com</div>
+                  </div>
+
+                  <div class="field">
+                    <div class="field-head">
+                      <label class="label">Password</label>
+                      <a class="link-xs">Sign in without one</a>
+                    </div>
+                    <div class="input focused"><span class="dots">••••••••••</span></div>
+                  </div>
+
+                  <a class="button block">Sign in</a>
+
+                  <div class="divider">
+                    <span class="rule"></span>
+                    or continue with
+                    <span class="rule"></span>
+                  </div>
+
+                  <div class="two-up">
+                    <a class="button outline">Google</a>
+                    <a class="button outline">GitHub</a>
+                  </div>
+                </div>
+
+                <div class="foot">No account yet? <a>Create one</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 02 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">02</span>
+          <div style="flex: 1">
+            <h3>Вибір продукту — той самий шелл, картки з хабу</h3>
+            <p>Права колонка замість форми тримає список. Картка — геометрія <code>SpaceCard</code> з <code>HubPage.tsx</code>: іконка, назва, підпис, ряд бейджів.</p>
+            <ul class="tags">
+              <li>нічого нового не вигадано</li>
+              <li>Identity = вхід + вибір, один вигляд</li>
+              <li>акаунт унизу, як footer шелла</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="authshell">
+            <div class="brand-panel">
+              <a class="brand-lockup">
+                <svg><use href="#mark-identity" /></svg>
+                <span>Identity</span>
+              </a>
+
+              <div class="brand-middle">
+                <p class="brand-promise">You are in.<br />Pick where to work.</p>
+                <ul class="brand-list">
+                  <li><span aria-hidden="true">✓</span> Five applications, none of which asks again</li>
+                  <li><span aria-hidden="true">✓</span> Signed in as Ivan Hontarenko</li>
+                  <li><span aria-hidden="true">✓</span> Leaving one does not sign you out of the rest</li>
+                </ul>
+              </div>
+
+              <p class="brand-foot">Identity issues the tokens. Nothing else does.</p>
+            </div>
+
+            <div class="form-col">
+              <div class="form-inner">
+                <div class="head">
+                  <h2>Where to?</h2>
+                  <p>Everything your account opens.</p>
+                </div>
+
+                <div class="form" style="gap: 0.75rem">
+                  <a class="choice brand-tessera">
+                    <div class="choice-head">
+                      <span class="glyph"><svg><use href="#mark-tessera" /></svg></span>
+                      <span class="choice-title">
+                        <b>Tessera</b>
+                        <span>Projects, issues, boards and sprints</span>
+                      </span>
+                    </div>
+                    <div class="choice-meta">
+                      <span class="badge">last opened</span>
+                      <span class="stamp">2 hours ago</span>
+                    </div>
+                  </a>
+
+                  <a class="choice brand-innoventa">
+                    <div class="choice-head">
+                      <span class="glyph"><svg><use href="#mark-innoventa" /></svg></span>
+                      <span class="choice-title">
+                        <b>Innoventa</b>
+                        <span>Forms, inventory, entries</span>
+                      </span>
+                    </div>
+                    <div class="choice-meta">
+                      <span class="badge">owner</span>
+                      <span class="stamp">3 workspaces</span>
+                    </div>
+                  </a>
+
+                  <a class="choice brand-kiwi">
+                    <div class="choice-head">
+                      <span class="glyph"><svg><use href="#mark-kiwi" /></svg></span>
+                      <span class="choice-title">
+                        <b>Kiwi</b>
+                        <span>The knowledge base everything files into</span>
+                      </span>
+                    </div>
+                    <div class="choice-meta">
+                      <span class="stamp">· not opened yet</span>
+                    </div>
+                  </a>
+
+                  <a class="choice brand-moneta">
+                    <div class="choice-head">
+                      <span class="glyph"><svg><use href="#mark-moneta" /></svg></span>
+                      <span class="choice-title">
+                        <b>Moneta</b>
+                        <span>Personal finance, budgets and accounts</span>
+                      </span>
+                    </div>
+                    <div class="choice-meta">
+                      <span class="badge">owner</span>
+                    </div>
+                  </a>
+                </div>
+
+                <div class="account-line">
+                  <span class="avatar">IH</span>
+                  <div style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+                    <b style="font-size: 0.8125rem; font-weight: 500">Ivan Hontarenko</b>
+                    <span style="font-size: 0.75rem; color: var(--muted-foreground)">ihontarenko@gmail.com</span>
+                  </div>
+                  <a class="button ghost" style="padding: 0.5rem"><svg><use href="#icon-logout" /></svg></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 03 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">03</span>
+          <div style="flex: 1">
+            <h3>Вибір продукту — щільні рядки</h3>
+            <p>Те саме, але рядком: марка, назва, підпис, шеврон. Поміщається шість, і сьомий нічого не зламає.</p>
+            <ul class="tags">
+              <li>Central більше не «зайвий»</li>
+              <li>групи як у хабі — uppercase 12px</li>
+              <li>найближче до лаунчера</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net</span></div>
+
+          <div class="authshell">
+            <div class="brand-panel">
+              <a class="brand-lockup">
+                <svg><use href="#mark-identity" /></svg>
+                <span>Identity</span>
+              </a>
+
+              <div class="brand-middle">
+                <p class="brand-promise">One account for<br />everything you build.</p>
+                <ul class="brand-list">
+                  <li><span aria-hidden="true">✓</span> Innoventa, Moneta, Central, Tessera, Kiwi</li>
+                  <li><span aria-hidden="true">✓</span> Your password lives here and nowhere else</li>
+                  <li><span aria-hidden="true">✓</span> Revoke any connected client from one page</li>
+                </ul>
+              </div>
+
+              <p class="brand-foot">Identity issues the tokens. Nothing else does.</p>
+            </div>
+
+            <div class="form-col">
+              <div class="form-inner">
+                <div class="head">
+                  <h2>Where to?</h2>
+                  <p>Everything your account opens.</p>
+                </div>
+
+                <div class="form" style="gap: 1.25rem">
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                    <span class="group-label">Recent</span>
+                    <a class="row-choice brand-tessera">
+                      <span class="glyph"><svg><use href="#mark-tessera" /></svg></span>
+                      <span class="text"><b>Tessera</b><span>Projects, issues, boards and sprints</span></span>
+                      <svg class="chevron"><use href="#icon-chevron-right" /></svg>
+                    </a>
+                    <a class="row-choice brand-kiwi">
+                      <span class="glyph"><svg><use href="#mark-kiwi" /></svg></span>
+                      <span class="text"><b>Kiwi</b><span>The knowledge base everything files into</span></span>
+                      <svg class="chevron"><use href="#icon-chevron-right" /></svg>
+                    </a>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem">
+                    <span class="group-label">All applications</span>
+                    <a class="row-choice brand-innoventa">
+                      <span class="glyph"><svg><use href="#mark-innoventa" /></svg></span>
+                      <span class="text"><b>Innoventa</b><span>Forms, inventory, entries</span></span>
+                      <svg class="chevron"><use href="#icon-chevron-right" /></svg>
+                    </a>
+                    <a class="row-choice brand-moneta">
+                      <span class="glyph"><svg><use href="#mark-moneta" /></svg></span>
+                      <span class="text"><b>Moneta</b><span>Personal finance, budgets and accounts</span></span>
+                      <svg class="chevron"><use href="#icon-chevron-right" /></svg>
+                    </a>
+                    <a class="row-choice brand-central">
+                      <span class="glyph"><svg><use href="#mark-central" /></svg></span>
+                      <span class="text"><b>Central</b><span>Translations and the AI gateway</span></span>
+                      <svg class="chevron"><use href="#icon-chevron-right" /></svg>
+                    </a>
+                  </div>
+                </div>
+
+                <div class="account-line">
+                  <span class="avatar">IH</span>
+                  <div style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+                    <b style="font-size: 0.8125rem; font-weight: 500">Ivan Hontarenko</b>
+                    <span style="font-size: 0.75rem; color: var(--muted-foreground)">Manage your account</span>
+                  </div>
+                  <a class="button outline" style="height: 30px; padding: 0 0.625rem">Account</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 04 -->
+      <article class="mock">
+        <div class="mock-head">
+          <span class="mock-index">04</span>
+          <div style="flex: 1">
+            <h3>Вхід у контексті продукту</h3>
+            <p>Той самий шелл, коли сюди прислала Tessera: чіп із передачею вгорі й кнопка, яка каже, куди поверне. Без параметра — це рівно екран 01.</p>
+            <ul class="tags">
+              <li>один екран, два стани</li>
+              <li>жодної нової верстки</li>
+              <li>найчастіший шлях сюди</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen">
+          <div class="chrome"><i></i><i></i><i></i><span>id.innoventa.net/login?client_id=tessera-web</span></div>
+
+          <div class="authshell">
+            <div class="brand-panel">
+              <a class="brand-lockup">
+                <svg><use href="#mark-identity" /></svg>
+                <span>Identity</span>
+              </a>
+
+              <div class="brand-middle">
+                <p class="brand-promise">Tessera asked.<br />Identity answers.</p>
+                <ul class="brand-list">
+                  <li><span aria-hidden="true">✓</span> Your password never reaches Tessera</li>
+                  <li><span aria-hidden="true">✓</span> It learns your name, email and nothing else</li>
+                  <li><span aria-hidden="true">✓</span> Disconnect it any time from your account</li>
+                </ul>
+              </div>
+
+              <p class="brand-foot">Identity issues the tokens. Nothing else does.</p>
+            </div>
+
+            <div class="form-col">
+              <div class="form-inner">
+                <div class="handoff">
+                  <span class="chip brand-tessera">
+                    <svg style="color: var(--brand)"><use href="#mark-tessera" /></svg>
+                    Tessera
+                  </span>
+                  <svg class="arrow"><use href="#icon-arrow-right" /></svg>
+                  <span class="chip">
+                    <svg style="color: var(--primary)"><use href="#mark-identity" /></svg>
+                    Identity
+                  </span>
+                </div>
+
+                <div class="head">
+                  <h2>Sign in to continue</h2>
+                  <p>Tessera sent you here. You will land back where you left.</p>
+                </div>
+
+                <div class="form">
+                  <div class="notice error">That sign-in did not complete. Try again, or use your password.</div>
+
+                  <div class="field">
+                    <label class="label">Email</label>
+                    <div class="input placeholder">you@example.com</div>
+                  </div>
+
+                  <div class="field">
+                    <div class="field-head">
+                      <label class="label">Password</label>
+                      <a class="link-xs">Sign in without one</a>
+                    </div>
+                    <div class="input placeholder">Your password</div>
+                  </div>
+
+                  <a class="button block">Sign in and continue</a>
+
+                  <div class="divider">
+                    <span class="rule"></span>
+                    or continue with
+                    <span class="rule"></span>
+                  </div>
+
+                  <div class="two-up">
+                    <a class="button outline">Google</a>
+                    <a class="button outline">GitHub</a>
+                  </div>
+                </div>
+
+                <div class="foot" style="font-family: var(--font-mono); font-size: 0.75rem">
+                  → localhost:5050/login/oauth2/code/identity
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="notes">
+        <h2>Що саме звідки взято — і де я відхилився</h2>
+        <ul>
+          <li>
+            <strong>Геометрія — з коду, не з ока.</strong> <code>AuthShell.tsx</code> дав сітку, padding
+            панелі <code>p-10</code>, <code>max-w-sm</code> і <code>gap-6</code> праворуч, обидві радіальні
+            плями на <code>opacity-30</code>. <code>@jmouse/ui</code> дав <code>h-[34px]</code>,
+            <code>rounded-md</code> (це рівно 10px при <code>--radius: 0.75rem</code>),
+            <code>text-[12.5px]</code> і <code>text-[13px]</code> на лейблах.
+          </li>
+          <li>
+            <strong>Картка продукту — це <code>SpaceCard</code> з <code>HubPage.tsx</code>,</strong> з тим
+            самим <code>rounded-lg border p-4 hover:bg-accent/50</code> і тим самим рядом бейджів унизу.
+            Навіть «· not opened yet» — звідти, і воно так само з’являється лише там, де це правда.
+          </li>
+          <li>
+            <strong>Єдине відхилення — текст бренд-панелі.</strong> Обіцянка Innoventa
+            («inventory that takes the shape of what you count») для сервісу токенів беззмістовна, тож
+            там тепер обіцянка Identity. Верстка того блоку не змінена ні на піксель.
+          </li>
+          <li>
+            <strong>Onest — це не косметика.</strong> FE перейшла на неї, бо Space Grotesk і DM Sans не
+            мають кирилиці зовсім, і український рядок малювався системним фолбеком. Identity зараз саме
+            на тих двох — тобто ця ж вада в неї теж є, просто ще не помічена.
+          </li>
+          <li>
+            <strong>03 я б і взяв.</strong> 02 гарніше з чотирма продуктами, але їх п’ять, скоро шість —
+            рядки не примушують вибирати, кого не показати.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script>
+      const swatchButtons = document.querySelectorAll("#swatches .swatch");
+
+      swatchButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          document.documentElement.className = button.dataset.theme;
+
+          swatchButtons.forEach((other) => {
+            other.setAttribute("aria-pressed", String(other === button));
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

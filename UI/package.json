@@ -12,6 +12,7 @@
   "dependencies": {
     "@codemirror/language": "^6.12.4",
     "@hookform/resolvers": "^5.4.0",
+    "@jmouse/codemirror": "file:../../../jmouse-ui/packages/codemirror",
     "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.3.3",

@@ -204,12 +204,36 @@ a future `AccountRestController` (JSON, bearer-token authenticated) without any 
 service layer — that REST controller doesn't exist yet and isn't needed until that migration
 actually starts.
 
-**Planned, not yet built: Identity's own React frontend.** The Thymeleaf pages above are explicitly
-a placeholder — the plan is to replace them with a React SPA (landing page, account management, an
-admin user-management panel with block/unlock/delete, MFA), matching Innoventa/Moneta's
-stack, "get rid of spring rendering" entirely. Not started; needs its own scoping pass before
-implementation (bundles several independently-large features — don't build it as one undifferentiated
-blob).
+**Built since: Identity's own React frontend (`UI/`).** The Thymeleaf pages above were the
+placeholder they were always meant to be; the SPA replaced them (landing, account, admin
+user-management, access settings, appearance), bundled into the backend by `frontend-maven-plugin`, so
+`mvn spring-boot:run` still serves everything on 9090.
+
+**The two anonymous screens are a port of `Innoventa/FE`, not a design of their own** (`ID-16`).
+`components/auth/AuthShell.tsx` is `Innoventa/FE/src/components/auth/AuthShell.tsx` with Identity's
+copy on the panel and nothing else moved — the grid, the panel's `p-10`, the `max-w-sm` column at
+`gap-6` and both radial washes at thirty percent are that file's numbers, and `IDENTITY-DESIGN-
+AUTHSHELL.html` is the mock they were read off. `/login` is its variant 01 and `/` its variant 02, a
+chooser over the four products in `UI/src/products.ts`.
+
+- ⚠️ **These two routes sit outside `PublicLayout`.** `AuthShell` is `min-h-svh` and paints its own
+  background; a header bar above it pushes the fold and cuts the brand panel. `PublicLayout` now frames
+  the forced password change alone.
+- ⚠️ **The card's small print is the product's host, and that is a limit rather than a shortcut.** The
+  mock shows "last opened · 2 hours ago"; Identity mints tokens and never hears what a product does
+  with them, so it has no such fact and does not invent one. A product with no address under
+  `identity.clients` renders disabled and says `not configured` — which is also what the card shows
+  when the backend is older than the interface, since the address arrives from
+  `/api/application-links`.
+- ⚠️ **Four products, and Moneta is deliberately not among them.** It is still a registered client and
+  still signs in; it is simply not offered by the chooser, and `ApplicationLinksResponse` therefore
+  carries no `monetaUrl`.
+- ⚠️ **`--font-sans` and `--font-display` are both Onest**, replacing Space Grotesk over DM Sans.
+  Neither of those carries Cyrillic at all, so a Ukrainian string was drawn in whatever the system fell
+  back to. `Innoventa/FE` moved for that reason and this followed it.
+
+Still open on that frontend: MFA, and `ID-17` — under the font-scale zoom, `min-h-svh` overflows the
+viewport by the zoom factor on every full-height screen, the sidebar's included.
 
 ## Google / GitHub Login
 

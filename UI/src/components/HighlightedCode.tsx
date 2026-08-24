@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/helpers"
-import { highlightToHtml, resolveParser } from "@/lib/codemirror/staticHighlight"
+import { highlightToHtml, resolveParser } from "@/lib/codemirror"
 
 /**
  * A read-only block of code, coloured by the `.jmp` grammar and Identity's syntax palette.

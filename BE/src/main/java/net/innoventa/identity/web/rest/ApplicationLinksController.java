@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
  * landing page itself is the first thing an unauthenticated visitor sees. Reuses each client's
  * already-configured {@code postLogoutRedirectUri} as its base URL — replaces
  * {@code web.HomeViewController}.
+ *
+ * <p>⚠️ <strong>Four of the five registered clients, and Moneta is the one left out on purpose.</strong>
+ * It is still a client under {@code identity.clients} and still signs in exactly as before — it is
+ * simply not one of the applications this chooser offers, so an address nothing renders would be a
+ * field nobody reads.
  */
 @RestController
 @RequiredArgsConstructor
@@ -21,7 +26,7 @@ public class ApplicationLinksController {
     @GetMapping("/api/application-links")
     public ApplicationLinksResponse applicationLinks() {
         return new ApplicationLinksResponse(
-            clientUrl("innoventa"), clientUrl("moneta"), clientUrl("central"), clientUrl("tessera"));
+            clientUrl("central"), clientUrl("innoventa"), clientUrl("kiwi"), clientUrl("tessera"));
     }
 
     /**

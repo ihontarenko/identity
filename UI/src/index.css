@@ -1,11 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* The colours code is read in — six palettes, light and dark, shared with every other interface.
+   Deliberately NOT the theme's: decorative colour and legible colour are different jobs. */
+@import "@jmouse/codemirror/styles.css";
+
 @custom-variant dark (&:is(.dark *));
 
+/* ⚠️ ONE FAMILY FOR BOTH ROLES, AND IT IS NOT A COSMETIC CHOICE. This used to be Space Grotesk over
+   DM Sans — neither of which carries Cyrillic at all, so any Ukrainian string was silently drawn in
+   whatever the system happened to fall back to, at a different weight and a different rhythm from the
+   line above it. Innoventa/FE moved to Onest for exactly that reason; Identity follows, because the
+   sign-in screen is now a port of that interface's and half of what makes it one is the type. */
 @theme {
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Onest", system-ui, sans-serif;
+  --font-display: "Onest", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Courier New", monospace;
 }
 
@@ -1018,62 +1027,15 @@
 }
 
 /* ── Syntax colour ───────────────────────────────────────────────────────────
-   Ported verbatim from WiQ's `components/markdown/markdown.css`, itself Innoventa's house set.
+   ⚠️ **Moved out.** The nineteen `--syntax-*` tokens are now
+   `@jmouse/codemirror/styles.css`, imported at the top of this file — one set of values for
+   Identity, Tessera, Kiwi and both Innoventa interfaces, plus five more
+   palettes a reader can switch to. The copy that used to sit here was
+   byte-identical to three others, which is exactly how a shared look drifts.
 
-   ⚠️ On `:root` and deliberately NOT in any of the 27 theme blocks above. Decorative colour and legible
-   colour are two different jobs: a palette chosen for a sidebar put keywords and strings on the same hue
-   on some themes and a token a few percent off the background on others. So picking a theme recolours the
-   frame around code and never the code itself — see `lib/codemirror/highlightStyle.ts`.
-
-   Read by two things that must agree — the `HighlightStyle` and the stylesheet it generates for the
-   rendered policy (`lib/codemirror/staticHighlight.ts`). */
-:root {
-  --syntax-heading:     #2A2A29;
-  --syntax-keyword:     #C2185B;
-  --syntax-string:      #2F7A55;
-  --syntax-literal:     #A65A17;
-  --syntax-namespace:   #1B6E97;
-  --syntax-property:    #2E8BA8;
-  --syntax-declaration: #6A3FB5;
-  --syntax-variable:    #3A3A38;
-  --syntax-comment:     #8C8A85;
-  --syntax-operator:    #6E6C67;
-  --syntax-punctuation: #8C8A85;
-  --syntax-invalid:     #B3261E;
-
-  /* Policy (.jmp) — see `lib/codemirror/tags.ts` for why Identity paints a language at all.
-     `deny` is loud on purpose. */
-  --syntax-deny:        #B3261E;
-  --syntax-role:        #2E7D32;
-  --syntax-subject:     #9A6614;
-  --syntax-scope:       #6A3FB5;
-  --syntax-instance:    #3F8F4A;
-  --syntax-action:      #2E8BA8;
-}
-
-/* ThemeContext toggles `dark` on the root element alongside the theme's own class, so this is the one
-   place syntax colour follows anything the user picked — light versus dark, and nothing finer. */
-:root.dark {
-  --syntax-heading:     #E8E6E0;
-  --syntax-keyword:     #FF7EB6;
-  --syntax-string:      #7FD8A6;
-  --syntax-literal:     #FFAB70;
-  --syntax-namespace:   #6FC3E8;
-  --syntax-property:    #86D8F0;
-  --syntax-declaration: #C3A6FF;
-  --syntax-variable:    #D9D6CF;
-  --syntax-comment:     #8B8880;
-  --syntax-operator:    #A9A69F;
-  --syntax-punctuation: #8B8880;
-  --syntax-invalid:     #FF6B60;
-
-  --syntax-deny:        #FF6B60;
-  --syntax-role:        #7EE787;
-  --syntax-subject:     #E3B341;
-  --syntax-scope:       #C3A6FF;
-  --syntax-instance:    #9BE29B;
-  --syntax-action:      #86D8F0;
-}
+   The reasoning for why code has its own tokens at all, rather than painting
+   from `--primary`, moved with them and is at the top of that file.
+   ============================================================================ */
 
 @theme inline {
   --color-background: var(--background);

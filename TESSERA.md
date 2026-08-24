@@ -2,7 +2,7 @@
 
 > Project-specific notes for the `tessera` skill. The tracker is the record; this file is notes.
 > Fix it in the same response as any call that contradicts it.
-> Verified: 2026-08-17
+> Verified: 2026-08-20
 
 ## Project
 
@@ -18,8 +18,10 @@
 | Type | Used for |
 |---|---|
 | `Epic` | `ID-1` — the access system, user creation and MCP, parent of `ID-2`…`ID-10` |
-| `Story` | every other ticket so far |
-| `Task`, `Bug`, `Sub-task`, `UI changes` | legal, installation-wide, unused here so far |
+| `Story` | most tickets |
+| `UI changes` | `ID-16` — screen work with no behaviour behind it |
+| `Bug` | `ID-17` — something that is wrong rather than missing |
+| `Task`, `Sub-task` | legal, installation-wide, unused here so far |
 
 ⚠️ **`Papercut` and `Nit` do not exist as rows yet**, installation-wide. Until they are created by hand
 on `/administration` → Issue types, §1's "work nobody asked to file" rule files under `Task` here.

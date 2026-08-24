@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query"
 import { httpClient } from "@/api/httpClient"
 
 export interface ApplicationLinks {
-  innoventaUrl: string | null
-  monetaUrl: string | null
   centralUrl: string | null
+  innoventaUrl: string | null
+  kiwiUrl: string | null
   tesseraUrl: string | null
 }
 
