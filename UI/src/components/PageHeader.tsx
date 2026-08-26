@@ -16,16 +16,37 @@ interface PageHeaderProperties {
 // so the title/actions land in the same visual position regardless of the cancel-and-reapply.
 export function PageHeader({ title, description, actions }: PageHeaderProperties) {
   return (
-    <header className="-mx-4 -mt-4 flex flex-shrink-0 items-end justify-between gap-4 border-b bg-background px-6 pt-[18px] pb-[13px]">
-      <div>
+    // ⚠️ A narrower inset below `sm`: 24px is right on a desk and is six percent of a phone's width
+    // spent on nothing, twice, on the screen where the title has least room to begin with.
+    <header className="-mx-4 -mt-4 flex flex-shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b bg-background px-4 pt-[18px] pb-[13px] sm:px-6">
+      {/* ⚠️ min-w-0 and truncate, so a long user-typed title gives way instead of pushing the actions
+          off the right edge. Every Button here is shrink-0 whitespace-nowrap, so without this the
+          actions win the width fight and the primary one — Save, Edit — is the half that leaves. */}
+      <div className="min-w-0">
         {typeof title === "string" ? (
-          <h1 className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</h1>
+          <h1 className="truncate font-display text-lg font-semibold tracking-[-0.02em]">{title}</h1>
         ) : (
           title
         )}
         {description && <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {/* ⚠️ **Dropping to a row of its own is not the same as fitting on it.** `flex-wrap` above puts
+          the actions under the title, and they still ran off the right edge, because a wrapped flex
+          item is offered the line's width and `shrink-0` refuses it: a `w-64` search field plus a
+          Button (each one shrink-0 whitespace-nowrap) is ~400px of refusal on a 375px phone, and there
+          is nowhere to scroll to the remainder — the only scroller in the application is vertical,
+          inside an overflow-hidden SidebarInset. So: full-width and shrinkable below `sm`, and the
+          unshrinkable cluster at the right it has always been from `sm` up.
+
+          ⚠️ The `data-slot=input` rule is what makes that fit look deliberate rather than ragged. Left
+          alone flex wraps before it shrinks, so the field keeps its 256px and the primary button drops
+          to a third row by itself; `flex-1` re-bases the field on what is actually left over — it
+          already carries `min-w-0`. Fields only: a button must never be stretched to fill. */}
+      {actions && (
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 [&>[data-slot=input]]:flex-1 sm:w-auto sm:shrink-0 sm:[&>[data-slot=input]]:flex-none">
+          {actions}
+        </div>
+      )}
     </header>
   )
 }
