@@ -299,6 +299,15 @@ identity:
       post-logout-redirect-uris: ${IDENTITY_KIWI_POST_LOGOUT_REDIRECT_URIS:http://localhost:5070}
       audience: kiwi
       public-client: true
+    # ⚠️ THERE IS DELIBERATELY NO `trove` CLIENT HERE, and the absence is a decision rather than an
+    # omission (TRV-6, 2026-09-08).
+    #
+    # One was registered here for about an hour and removed the same session. Trove has its own local
+    # authorization, the way Norro does: accounts held by the product, no redirect to this server, no
+    # `trove` audience minted anywhere. Adding a client back would create a second, unused door into an
+    # adult-content archive and a token this installation would then have to decide what to do with.
+    #
+    # ⚠️ If somebody is looking for a Trove client because a sign-in is failing, the answer is not here.
     # ⚠️ UNUSED, AND IT CANNOT BE USED — kept only so nobody registers it a second time.
     #
     # A Model Context Protocol client has nowhere to be told a client id: it reads the authorization
